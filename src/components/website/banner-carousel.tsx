@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -80,14 +81,21 @@ export function BannerCarousel({ banners }: Props) {
               bgGradients[i % bgGradients.length]
             )}
           >
-            {/* Background image overlay */}
+            {/* Full background image when provided */}
             {banner.image && (
-              <div
-                className="absolute inset-0 bg-cover bg-center opacity-20"
-                style={{ backgroundImage: `url(${banner.image})` }}
-              />
+              <>
+                <Image
+                  src={banner.image}
+                  alt={banner.title}
+                  fill
+                  className="object-cover"
+                  priority={i === 0}
+                />
+                {/* dark scrim so text stays readable */}
+                <div className="absolute inset-0 bg-black/55" />
+              </>
             )}
-            <div className="absolute inset-0 bg-brand/10" />
+            {!banner.image && <div className="absolute inset-0 bg-brand/10" />}
 
             <div className="relative max-w-7xl mx-auto px-4 py-20 md:py-32 flex flex-col md:flex-row items-center gap-10">
               <div className="flex-1 max-w-2xl">
@@ -118,8 +126,8 @@ export function BannerCarousel({ banners }: Props) {
                 </div>
               </div>
 
-              {/* Stats — only on first slide to avoid clutter */}
-              {i === 0 && (
+              {/* Stats — only on first slide without image to avoid clutter */}
+              {i === 0 && !banner.image && (
                 <div className="hidden md:flex flex-col gap-4 text-center">
                   {[
                     { value: '20+', label: 'Years Experience' },
