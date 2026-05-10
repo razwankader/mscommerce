@@ -1,0 +1,92 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth'
+import { generateOrderNumber } from '@/lib/utils'
+import { getShippingConfig, calcShipping } from '@/lib/shipping'
+
+export async function GET(req: NextRequest) {
+  const session = await auth()
+  if (!session || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = req.nextUrl
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = parseInt(searchParams.get('limit') || '10')
+  const status = searchParams.get('status') || ''
+  const search = searchParams.get('search') || ''
+
+  const where: any = {}
+  if (status) where.status = status
+  if (search) {
+    where.OR = [
+      { orderNumber: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { firstName: { contains: search, mode: 'insensitive' } },
+    ]
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      include: { orderItems: { include: { product: true } } },
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.order.count({ where }),
+  ])
+
+  return NextResponse.json({ data, total, page, limit, totalPages: Math.ceil(total / limit) })
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json()
+  const { items, firstName, lastName, email, phone, address, city, state, zipCode, notes } = body
+
+  if (!items || items.length === 0) {
+    return NextResponse.json({ error: 'No items in order' }, { status: 400 })
+  }
+
+  const productIds = items.map((i: any) => i.productId)
+  const products = await prisma.product.findMany({ where: { id: { in: productIds } } })
+
+  let subtotal = 0
+  const orderItems = items.map((item: any) => {
+    const product = products.find((p) => p.id === item.productId)
+    if (!product) throw new Error(`Product ${item.productId} not found`)
+    const price = Number(product.salePrice || product.price)
+    subtotal += price * item.quantity
+    return { productId: item.productId, quantity: item.quantity, price }
+  })
+
+  const shippingConfig = await getShippingConfig()
+  const shipping = calcShipping(subtotal, shippingConfig)
+  const total = subtotal + shipping
+
+  const session = await auth()
+
+  const order = await prisma.order.create({
+    data: {
+      orderNumber: generateOrderNumber(),
+      userId: session?.user?.id || null,
+      subtotal,
+      shipping,
+      tax: 0,
+      total,
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      city,
+      state,
+      zipCode,
+      notes,
+      orderItems: { create: orderItems },
+    },
+    include: { orderItems: { include: { product: true } } },
+  })
+
+  return NextResponse.json(order, { status: 201 })
+}
