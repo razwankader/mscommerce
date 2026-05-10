@@ -15,6 +15,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   const hasDiscount = product.salePrice != null && product.salePrice < product.price
   const discountPct = hasDiscount
@@ -38,12 +39,14 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow">
       <Link href={`/products/${product.slug}`} className="block relative aspect-square bg-gray-50 overflow-hidden">
-        {product.images && product.images[0] ? (
+        {product.images && product.images[0] && !imgError ? (
           <Image
             src={product.images[0]}
             alt={product.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImgError(true)}
+            unoptimized={product.images[0].includes('sanitary.pk')}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

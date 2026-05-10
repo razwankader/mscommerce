@@ -59,7 +59,7 @@ export default async function ProductDetailPage({ params }: Props) {
         <div className="space-y-4">
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
             {product.images && product.images[0] ? (
-              <Image src={product.images[0]} alt={product.name} fill className="object-cover" />
+              <Image src={product.images[0]} alt={product.name} fill className="object-cover" unoptimized={product.images[0].includes('sanitary.pk')} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-6xl">🚿</div>
             )}
