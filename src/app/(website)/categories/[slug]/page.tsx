@@ -5,25 +5,28 @@ import { serializeProduct } from '@/lib/utils'
 import type { Metadata } from 'next'
 
 interface Props {
-  params: { slug: string }
-  searchParams: { page?: string }
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ page?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const cat = await prisma.category.findUnique({ where: { slug: params.slug } })
+  const { slug } = await params
+  const cat = await prisma.category.findUnique({ where: { slug } })
   if (!cat) return { title: 'Category Not Found' }
   return { title: cat.name, description: cat.description || undefined }
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
+  const { slug } = await params
+  const { page: pageParam } = await searchParams
   const category = await prisma.category.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: { children: true },
   })
 
   if (!category) notFound()
 
-  const page = parseInt(searchParams.page || '1')
+  const page = parseInt(pageParam || '1')
   const limit = 12
   const skip = (page - 1) * limit
 

@@ -10,11 +10,12 @@ import { AddToCartButton } from '@/components/website/add-to-cart-button'
 import type { ProductWithRelations } from '@/types'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await prisma.product.findUnique({ where: { slug: params.slug } })
+  const { slug } = await params
+  const product = await prisma.product.findUnique({ where: { slug } })
   if (!product) return { title: 'Product Not Found' }
   return {
     title: product.metaTitle || product.name,
@@ -23,8 +24,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
+  const { slug } = await params
   const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: { category: true, brand: true },
   })
 
