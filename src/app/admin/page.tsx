@@ -90,7 +90,7 @@ export default async function AdminDashboard() {
           icon={ShoppingCart}
           color="blue"
           change={`${data.pendingOrders} pending`}
-          changeType={data.pendingOrders > 0 ? 'warning' : 'neutral'}
+          changeType={data.pendingOrders > 0 ? 'negative' : 'neutral'}
         />
         <StatCard
           title="Products"
