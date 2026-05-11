@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { revalidateTag } from 'next/cache'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -16,6 +17,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     data: { name, description, image, parentId: parentId || null, order: order || 0, isActive },
   })
 
+  revalidateTag('categories')
   return NextResponse.json(category)
 }
 
@@ -27,5 +29,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   await prisma.category.update({ where: { id: id }, data: { isActive: false } })
+  revalidateTag('categories')
   return NextResponse.json({ success: true })
 }

@@ -2,30 +2,39 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { slugify } from '@/lib/utils'
+import { unstable_cache, revalidateTag } from 'next/cache'
+
+const getParentCategories = unstable_cache(
+  async () => prisma.category.findMany({
+    where: { isActive: true, parentId: null },
+    include: { children: { where: { isActive: true } } },
+    orderBy: { order: 'asc' },
+  }),
+  ['categories-parent'],
+  { tags: ['categories'], revalidate: 3600 }
+)
+
+const getAllCategories = unstable_cache(
+  async () => prisma.category.findMany({
+    where: { isActive: true },
+    include: { _count: { select: { products: true } }, children: true },
+    orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
+  }),
+  ['categories-all'],
+  { tags: ['categories'], revalidate: 3600 }
+)
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const parent = searchParams.get('parent')
 
   if (parent === 'true') {
-    const data = await prisma.category.findMany({
-      where: { isActive: true, parentId: null },
-      include: { children: { where: { isActive: true } } },
-      orderBy: { order: 'asc' },
-    })
-    return NextResponse.json({ data }, {
-      headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
-    })
+    const data = await getParentCategories()
+    return NextResponse.json({ data })
   }
 
-  const data = await prisma.category.findMany({
-    where: { isActive: true },
-    include: { _count: { select: { products: true } }, children: true },
-    orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
-  })
-  return NextResponse.json({ data }, {
-    headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
-  })
+  const data = await getAllCategories()
+  return NextResponse.json({ data })
 }
 
 export async function POST(req: NextRequest) {
@@ -50,5 +59,6 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  revalidateTag('categories')
   return NextResponse.json(category, { status: 201 })
 }
