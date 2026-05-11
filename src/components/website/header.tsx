@@ -116,7 +116,7 @@ export function WebsiteHeader() {
               <span className="text-gray-400">info@matinsanitary.com</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-gray-400">
+          <div className="hidden sm:flex items-center gap-1.5 text-gray-400">
             <Truck size={11} className="text-orange-400" />
             {freeShippingThreshold === undefined ? null : freeShippingThreshold !== null ? (
               <span>Free delivery above <span className="font-semibold text-gray-300">৳{freeShippingThreshold.toLocaleString('en-BD')}</span></span>
