@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { slugify } from '@/lib/utils'
+import { revalidateTag } from 'next/cache'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -72,5 +73,6 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  revalidateTag('products')
   return NextResponse.json(product, { status: 201 })
 }

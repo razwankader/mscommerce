@@ -7,15 +7,34 @@ import { ArrowLeft, Star, Package } from 'lucide-react'
 import type { Metadata } from 'next'
 import { ProductCard } from '@/components/website/product-card'
 import { AddToCartButton } from '@/components/website/add-to-cart-button'
-import type { ProductWithRelations } from '@/types'
+import type { ProductWithRelations, SerializedProduct } from '@/types'
+import { unstable_cache } from 'next/cache'
 
 interface Props {
   params: Promise<{ slug: string }>
 }
 
+const getCachedProduct = (slug: string) =>
+  unstable_cache(
+    () => prisma.product.findUnique({ where: { slug }, include: { category: true, brand: true } }),
+    ['product', slug],
+    { tags: ['products'], revalidate: 3600 }
+  )()
+
+const getCachedRelated = (categoryId: string | null, excludeId: string): Promise<SerializedProduct[]> =>
+  unstable_cache(
+    () => prisma.product.findMany({
+      where: { categoryId, id: { not: excludeId }, status: 'ACTIVE' },
+      include: { category: true, brand: true },
+      take: 4,
+    }).then(r => r.map(serializeProduct)),
+    ['product-related', categoryId ?? 'none', excludeId],
+    { tags: ['products'], revalidate: 3600 }
+  )()
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const product = await prisma.product.findUnique({ where: { slug } })
+  const product = await getCachedProduct(slug)
   if (!product) return { title: 'Product Not Found' }
   return {
     title: product.metaTitle || product.name,
@@ -25,22 +44,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params
-  const product = await prisma.product.findUnique({
-    where: { slug },
-    include: { category: true, brand: true },
-  })
+  const product = await getCachedProduct(slug)
 
   if (!product || product.status !== 'ACTIVE') notFound()
 
-  const related = await prisma.product.findMany({
-    where: {
-      categoryId: product.categoryId,
-      id: { not: product.id },
-      status: 'ACTIVE',
-    },
-    include: { category: true, brand: true },
-    take: 4,
-  }).then(r => r.map(serializeProduct))
+  const related = await getCachedRelated(product.categoryId, product.id)
 
   const hasDiscount = product.salePrice && Number(product.salePrice) < Number(product.price)
   const discountPct = hasDiscount
