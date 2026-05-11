@@ -3,6 +3,65 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Phone, Mail, Truck, Menu, X, ChevronDown, ShoppingCart } from 'lucide-react'
+
+function MobileMenu({ categories, onClose }: { categories: NavCategory[]; onClose: () => void }) {
+  const [openCat, setOpenCat] = useState<string | null>(null)
+
+  return (
+    <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 space-y-1">
+      <Link href="/" className="block py-2.5 text-sm font-medium text-gray-700 hover:text-brand border-b border-gray-100" onClick={onClose}>
+        Home
+      </Link>
+
+      {categories.map((cat) => (
+        <div key={cat.id} className="border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <Link
+              href={`/categories/${cat.slug}`}
+              className="flex-1 py-2.5 text-sm font-medium text-gray-700 hover:text-brand"
+              onClick={onClose}
+            >
+              {cat.name}
+            </Link>
+            {cat.children && cat.children.length > 0 && (
+              <button
+                onClick={() => setOpenCat(openCat === cat.id ? null : cat.id)}
+                className="p-2 text-gray-400 hover:text-brand"
+              >
+                <ChevronDown size={16} className={cn('transition-transform duration-200', openCat === cat.id ? 'rotate-180' : '')} />
+              </button>
+            )}
+          </div>
+          {openCat === cat.id && cat.children && cat.children.length > 0 && (
+            <div className="pl-4 pb-2 space-y-1">
+              {cat.children.map((sub) => (
+                <Link
+                  key={sub.id}
+                  href={`/categories/${sub.slug}`}
+                  className="flex items-center gap-2 py-2 text-sm text-gray-500 hover:text-brand"
+                  onClick={onClose}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand/40 shrink-0" />
+                  {sub.name}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+
+      <Link href="/products" className="block py-2.5 text-sm font-medium text-gray-700 hover:text-brand border-b border-gray-100" onClick={onClose}>
+        All Products
+      </Link>
+      <Link href="/about" className="block py-2.5 text-sm font-medium text-gray-700 hover:text-brand border-b border-gray-100" onClick={onClose}>
+        About
+      </Link>
+      <Link href="/contact" className="block py-2.5 text-sm font-semibold text-brand" onClick={onClose}>
+        Contact Us
+      </Link>
+    </div>
+  )
+}
 import { SearchBar } from '@/components/website/search-bar'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/logo'
@@ -168,23 +227,7 @@ export function WebsiteHeader() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 space-y-2">
-          {[
-            { href: '/', label: 'Home' },
-            { href: '/products', label: 'All Products' },
-            { href: '/about', label: 'About' },
-            { href: '/contact', label: 'Contact' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="block py-2 text-sm text-gray-700 hover:text-brand transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
+        <MobileMenu categories={categories} onClose={() => setMenuOpen(false)} />
       )}
     </header>
   )
