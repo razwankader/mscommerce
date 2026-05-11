@@ -13,7 +13,9 @@ export async function GET(req: NextRequest) {
       include: { children: { where: { isActive: true } } },
       orderBy: { order: 'asc' },
     })
-    return NextResponse.json({ data })
+    return NextResponse.json({ data }, {
+      headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
+    })
   }
 
   const data = await prisma.category.findMany({
@@ -21,7 +23,9 @@ export async function GET(req: NextRequest) {
     include: { _count: { select: { products: true } }, children: true },
     orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
   })
-  return NextResponse.json({ data })
+  return NextResponse.json({ data }, {
+    headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
+  })
 }
 
 export async function POST(req: NextRequest) {
