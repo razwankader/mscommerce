@@ -105,17 +105,23 @@ export function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
           </div>
-          <button
-            onClick={handleAddToCart}
-            className={`p-2 rounded-lg transition-colors ${
-              added
-                ? 'bg-green-500 text-white'
-                : 'bg-brand/10 text-brand hover:bg-brand hover:text-white'
-            }`}
-            title="Add to Cart"
-          >
-            {added ? <Check size={16} /> : <ShoppingCart size={16} />}
-          </button>
+          {product.stock > 0 ? (
+            <button
+              onClick={handleAddToCart}
+              className={`p-2 rounded-lg transition-colors ${
+                added
+                  ? 'bg-green-500 text-white'
+                  : 'bg-brand/10 text-brand hover:bg-brand hover:text-white'
+              }`}
+              title="Add to Cart"
+            >
+              {added ? <Check size={16} /> : <ShoppingCart size={16} />}
+            </button>
+          ) : (
+            <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-1 rounded-lg">
+              Out of Stock
+            </span>
+          )}
         </div>
       </div>
     </div>
