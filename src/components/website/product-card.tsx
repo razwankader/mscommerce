@@ -7,6 +7,7 @@ import { formatPrice } from '@/lib/utils'
 import type { SerializedProduct } from '@/types'
 import { useCart } from '@/context/cart-context'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 interface ProductCardProps {
   product: SerializedProduct
@@ -22,7 +23,7 @@ export function ProductCard({ product }: ProductCardProps) {
     ? Math.round((1 - product.salePrice! / product.price) * 100)
     : 0
 
-  function handleAddToCart(e: React.MouseEvent) {
+  async function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
     addItem({
       id: product.id,
@@ -34,6 +35,20 @@ export function ProductCard({ product }: ProductCardProps) {
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
+
+    const res = await fetch(`/api/products/${product.id}/relations`)
+    const data = await res.json()
+    const hasRelations = (data.data || []).length > 0
+
+    toast.success(`${product.name} added to cart!`, {
+      description: hasRelations
+        ? 'View the product page for compatible accessories, fittings & related items to complete your installation.'
+        : undefined,
+      duration: 8000,
+      action: hasRelations
+        ? { label: 'View Product', onClick: () => { window.location.href = `/products/${product.slug}` } }
+        : undefined,
+    })
   }
 
   return (

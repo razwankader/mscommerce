@@ -3,6 +3,7 @@
 import { ShoppingCart, Check } from 'lucide-react'
 import { useCart } from '@/context/cart-context'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 interface Props {
   id: string
@@ -12,9 +13,10 @@ interface Props {
   salePrice: number | null
   image: string | null
   stock: number
+  hasRelations?: boolean
 }
 
-export function AddToCartButton({ id, slug, name, price, salePrice, image, stock }: Props) {
+export function AddToCartButton({ id, slug, name, price, salePrice, image, stock, hasRelations }: Props) {
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
 
@@ -22,6 +24,13 @@ export function AddToCartButton({ id, slug, name, price, salePrice, image, stock
     addItem({ id, slug, name, price, salePrice, image })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
+
+    toast.success(`${name} added to cart!`, {
+      description: hasRelations
+        ? 'Scroll down to see matching accessories, fittings & related products — complete your setup in one order.'
+        : undefined,
+      duration: 8000,
+    })
   }
 
   return (
