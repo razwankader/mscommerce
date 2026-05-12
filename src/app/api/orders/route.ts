@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { generateOrderNumber } from '@/lib/utils'
 import { getShippingConfig, calcShipping } from '@/lib/shipping'
+import { revalidateTag } from 'next/cache'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
       })
     })
 
+    revalidateTag('products')
     return NextResponse.json(order, { status: 201 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Order failed' }, { status: 409 })
