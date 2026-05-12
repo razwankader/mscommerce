@@ -29,6 +29,12 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum RelationType {
+  RELATED
+  ACCESSORY
+  FITTING
+}
+
 enum BannerStatus {
   ACTIVE
   INACTIVE
@@ -111,12 +117,28 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  category   Category?   @relation(fields: [categoryId], references: [id])
-  brand      Brand?      @relation(fields: [brandId], references: [id])
+  category   Category?         @relation(fields: [categoryId], references: [id])
+  brand      Brand?            @relation(fields: [brandId], references: [id])
   orderItems OrderItem[]
   reviews    Review[]
+  relations  ProductRelation[] @relation("ProductRelations")
+  relatedTo  ProductRelation[] @relation("RelatedTo")
 
   @@map("products")
+}
+
+model ProductRelation {
+  id        String       @id @default(cuid())
+  productId String
+  relatedId String
+  type      RelationType @default(RELATED)
+  createdAt DateTime     @default(now())
+
+  product Product @relation("ProductRelations", fields: [productId], references: [id], onDelete: Cascade)
+  related  Product @relation("RelatedTo", fields: [relatedId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, relatedId])
+  @@map("product_relations")
 }
 
 model Banner {

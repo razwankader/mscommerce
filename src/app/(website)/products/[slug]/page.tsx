@@ -32,6 +32,22 @@ const getCachedRelated = (categoryId: string | null, excludeId: string): Promise
     { tags: ['products'], revalidate: 3600 }
   )()
 
+const getCachedManualRelations = (productId: string) =>
+  unstable_cache(
+    async () => {
+      const rels = await prisma.productRelation.findMany({
+        where: { productId, related: { status: 'ACTIVE' } },
+        include: {
+          related: { include: { category: true, brand: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+      return rels.map(r => ({ type: r.type, product: serializeProduct(r.related) }))
+    },
+    ['product-manual-relations', productId],
+    { tags: ['products'], revalidate: 3600 }
+  )()
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const product = await getCachedProduct(slug)
@@ -48,7 +64,16 @@ export default async function ProductDetailPage({ params }: Props) {
 
   if (!product || product.status !== 'ACTIVE') notFound()
 
-  const related = await getCachedRelated(product.categoryId, product.id)
+  const [related, manualRelations] = await Promise.all([
+    getCachedRelated(product.categoryId, product.id),
+    getCachedManualRelations(product.id),
+  ])
+
+  const grouped = {
+    RELATED: manualRelations.filter(r => r.type === 'RELATED').map(r => r.product),
+    ACCESSORY: manualRelations.filter(r => r.type === 'ACCESSORY').map(r => r.product),
+    FITTING: manualRelations.filter(r => r.type === 'FITTING').map(r => r.product),
+  }
 
   const hasDiscount = product.salePrice && Number(product.salePrice) < Number(product.price)
   const discountPct = hasDiscount
@@ -155,13 +180,27 @@ export default async function ProductDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {related.length > 0 && (
-        <section className="mt-16">
+      {/* Manual relations — grouped by type */}
+      {(['RELATED', 'ACCESSORY', 'FITTING'] as const).map((type) => {
+        const items = grouped[type]
+        if (!items.length) return null
+        const labels = { RELATED: 'Related Products', ACCESSORY: 'Accessories', FITTING: 'Fittings' }
+        return (
+          <section key={type} className="mt-14">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">{labels[type]}</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {items.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </section>
+        )
+      })}
+
+      {/* Category-based fallback — only when no manual relations at all */}
+      {manualRelations.length === 0 && related.length > 0 && (
+        <section className="mt-14">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Related Products</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {related.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+            {related.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
         </section>
       )}
