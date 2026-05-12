@@ -51,10 +51,18 @@ export async function POST(req: NextRequest) {
   const productIds = items.map((i: any) => i.productId)
   const products = await prisma.product.findMany({ where: { id: { in: productIds } } })
 
+  // Early stock check (non-binding — real enforcement is inside the transaction)
+  for (const item of items) {
+    const product = products.find((p) => p.id === item.productId)
+    if (!product) return NextResponse.json({ error: `Product not found: ${item.productId}` }, { status: 400 })
+    if (product.stock < item.quantity) {
+      return NextResponse.json({ error: `Insufficient stock for "${product.name}"` }, { status: 409 })
+    }
+  }
+
   let subtotal = 0
   const orderItems = items.map((item: any) => {
-    const product = products.find((p) => p.id === item.productId)
-    if (!product) throw new Error(`Product ${item.productId} not found`)
+    const product = products.find((p) => p.id === item.productId)!
     const price = Number(product.salePrice || product.price)
     subtotal += price * item.quantity
     return { productId: item.productId, quantity: item.quantity, price }
@@ -66,27 +74,45 @@ export async function POST(req: NextRequest) {
 
   const session = await auth()
 
-  const order = await prisma.order.create({
-    data: {
-      orderNumber: generateOrderNumber(),
-      userId: session?.user?.id || null,
-      subtotal,
-      shipping,
-      tax: 0,
-      total,
-      firstName,
-      lastName,
-      email,
-      phone,
-      address,
-      city,
-      state,
-      zipCode,
-      notes,
-      orderItems: { create: orderItems },
-    },
-    include: { orderItems: { include: { product: true } } },
-  })
+  try {
+    const order = await prisma.$transaction(async (tx) => {
+      // Atomic stock decrement — WHERE stock >= quantity prevents overselling under concurrency
+      for (const item of items) {
+        const result = await tx.product.updateMany({
+          where: { id: item.productId, stock: { gte: item.quantity } },
+          data: { stock: { decrement: item.quantity } },
+        })
+        if (result.count === 0) {
+          const product = products.find((p) => p.id === item.productId)
+          throw new Error(`Insufficient stock for "${product?.name ?? item.productId}"`)
+        }
+      }
 
-  return NextResponse.json(order, { status: 201 })
+      return tx.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          userId: session?.user?.id || null,
+          subtotal,
+          shipping,
+          tax: 0,
+          total,
+          firstName,
+          lastName,
+          email,
+          phone,
+          address,
+          city,
+          state,
+          zipCode,
+          notes,
+          orderItems: { create: orderItems },
+        },
+        include: { orderItems: { include: { product: true } } },
+      })
+    })
+
+    return NextResponse.json(order, { status: 201 })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Order failed' }, { status: 409 })
+  }
 }
