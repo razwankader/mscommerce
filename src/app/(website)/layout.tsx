@@ -1,12 +1,14 @@
 import { WebsiteHeader } from '@/components/website/header'
 import { WebsiteFooter } from '@/components/website/footer'
 import { CartProvider } from '@/context/cart-context'
+import { WishlistProvider } from '@/context/wishlist-context'
 import NextTopLoader from 'nextjs-toploader'
 import { Toaster } from 'sonner'
 
 export default function WebsiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <CartProvider>
+    <WishlistProvider>
       <NextTopLoader color="#f97316" height={3} showSpinner={false} />
       <Toaster
         position="top-right"
@@ -26,6 +28,7 @@ export default function WebsiteLayout({ children }: { children: React.ReactNode 
         <main className="flex-1">{children}</main>
         <WebsiteFooter />
       </div>
+    </WishlistProvider>
     </CartProvider>
   )
 }

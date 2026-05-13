@@ -56,8 +56,11 @@ function MobileMenu({ categories, onClose }: { categories: NavCategory[]; onClos
       <Link href="/about" className="block py-2.5 text-sm font-medium text-gray-700 hover:text-brand border-b border-gray-100" onClick={onClose}>
         About
       </Link>
-      <Link href="/contact" className="block py-2.5 text-sm font-semibold text-brand" onClick={onClose}>
+      <Link href="/contact" className="block py-2.5 text-sm font-semibold text-brand border-b border-gray-100" onClick={onClose}>
         Contact Us
+      </Link>
+      <Link href="/account/login" className="block py-2.5 text-sm font-medium text-gray-700 hover:text-brand" onClick={onClose}>
+        Sign In / Register
       </Link>
     </div>
   )
@@ -66,6 +69,8 @@ import { SearchBar } from '@/components/website/search-bar'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/logo'
 import { useCart } from '@/context/cart-context'
+import { useSession, signOut } from 'next-auth/react'
+import { User, LogOut, Package, UserCircle, Heart, Lock } from 'lucide-react'
 
 interface NavCategory {
   id: string
@@ -76,10 +81,12 @@ interface NavCategory {
 
 export function WebsiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [categories, setCategories] = useState<NavCategory[]>([])
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | null | undefined>(undefined)
   const { count } = useCart()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
     fetch('/api/shipping-config')
@@ -154,6 +161,55 @@ export function WebsiteHeader() {
                 </span>
               )}
             </Link>
+            {/* User menu */}
+            {status === 'authenticated' && session?.user && !['ADMIN', 'MANAGER'].includes(session.user.role ?? '') ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm hover:border-brand transition-colors"
+                >
+                  {session.user.image ? (
+                    <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <UserCircle size={18} className="text-gray-600" />
+                  )}
+                  <span className="hidden sm:block text-gray-700 max-w-[80px] truncate">{session.user.name?.split(' ')[0]}</span>
+                </button>
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-20">
+                      <Link href="/account" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-brand" onClick={() => setUserMenuOpen(false)}>
+                        <User size={15} /> My Profile
+                      </Link>
+                      <Link href="/account/orders" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-brand" onClick={() => setUserMenuOpen(false)}>
+                        <Package size={15} /> My Orders
+                      </Link>
+                      <Link href="/account/wishlist" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-brand" onClick={() => setUserMenuOpen(false)}>
+                        <Heart size={15} /> Wishlist
+                      </Link>
+                      <Link href="/account/password" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-brand" onClick={() => setUserMenuOpen(false)}>
+                        <Lock size={15} /> Change Password
+                      </Link>
+                      <div className="border-t border-gray-100 mt-1 pt-1">
+                        <button
+                          onClick={() => { setUserMenuOpen(false); signOut({ callbackUrl: '/' }) }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                        >
+                          <LogOut size={15} /> Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : status === 'unauthenticated' ? (
+              <Link href="/account/login" className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-brand transition-colors">
+                <User size={16} className="text-gray-600" />
+                <span className="hidden sm:block">Sign In</span>
+              </Link>
+            ) : null}
+
             <button
               className="md:hidden p-2 rounded-xl border border-gray-200"
               onClick={() => setMenuOpen(!menuOpen)}

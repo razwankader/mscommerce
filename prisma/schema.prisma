@@ -46,21 +46,63 @@ enum PageStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      UserRole @default(CUSTOMER)
-  phone     String?
-  avatar    String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  role          UserRole  @default(CUSTOMER)
+  phone         String?
+  avatar        String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  orders  Order[]
-  reviews Review[]
+  orders        Order[]
+  reviews       Review[]
+  accounts      Account[]
+  wishlistItems WishlistItem[]
 
   @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
 }
 
 model Category {
@@ -117,12 +159,13 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  category   Category?         @relation(fields: [categoryId], references: [id])
-  brand      Brand?            @relation(fields: [brandId], references: [id])
-  orderItems OrderItem[]
-  reviews    Review[]
-  relations  ProductRelation[] @relation("ProductRelations")
-  relatedTo  ProductRelation[] @relation("RelatedTo")
+  category      Category?         @relation(fields: [categoryId], references: [id])
+  brand         Brand?            @relation(fields: [brandId], references: [id])
+  orderItems    OrderItem[]
+  reviews       Review[]
+  relations     ProductRelation[] @relation("ProductRelations")
+  relatedTo     ProductRelation[] @relation("RelatedTo")
+  wishlistItems WishlistItem[]
 
   @@map("products")
 }
@@ -218,6 +261,19 @@ model OrderItem {
   product Product @relation(fields: [productId], references: [id])
 
   @@map("order_items")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
 }
 
 model Review {

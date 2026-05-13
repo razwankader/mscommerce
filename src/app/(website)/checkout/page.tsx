@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, Banknote, ShoppingBag, Loader2 } from 'lucide-react'
 import { useCart } from '@/context/cart-context'
+import { useSession } from 'next-auth/react'
 
 interface ShippingConfig {
   threshold: number | null
@@ -41,10 +42,12 @@ const INITIAL: FormData = {
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, count, total, clearCart } = useCart()
+  const { data: session, status } = useSession()
   const [form, setForm] = useState<FormData>(INITIAL)
   const [errors, setErrors] = useState<Partial<FormData>>({})
   const [submitting, setSubmitting] = useState(false)
   const [shippingConfig, setShippingConfig] = useState<ShippingConfig | null>(null)
+  const [prefilled, setPrefilled] = useState(false)
 
   useEffect(() => {
     fetch('/api/shipping-config')
@@ -52,6 +55,26 @@ export default function CheckoutPage() {
       .then(setShippingConfig)
       .catch(() => setShippingConfig({ threshold: null, cost: 150 }))
   }, [])
+
+  useEffect(() => {
+    if (status !== 'authenticated' || prefilled) return
+    fetch('/api/account/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(profile => {
+        if (!profile) return
+        const parts = (profile.name || '').trim().split(' ')
+        const firstName = parts[0] || ''
+        const lastName = parts.slice(1).join(' ') || ''
+        setForm(f => ({
+          ...f,
+          firstName: firstName || f.firstName,
+          lastName: lastName || f.lastName,
+          email: profile.email || f.email,
+          phone: profile.phone || f.phone,
+        }))
+        setPrefilled(true)
+      })
+  }, [status, prefilled])
 
   const shipping = shippingConfig
     ? (shippingConfig.threshold !== null && total >= shippingConfig.threshold ? 0 : shippingConfig.cost)
@@ -131,7 +154,14 @@ export default function CheckoutPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Delivery Details */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-base font-bold text-gray-900 mb-5">Delivery Information</h2>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-bold text-gray-900">Delivery Information</h2>
+                {prefilled && (
+                  <Link href="/account" className="text-xs text-brand hover:underline">
+                    Edit profile
+                  </Link>
+                )}
+              </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="First Name *" error={errors.firstName}>
                   <input

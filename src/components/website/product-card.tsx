@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart, Check } from 'lucide-react'
+import { ShoppingCart, Check, Heart } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import type { SerializedProduct } from '@/types'
 import { useCart } from '@/context/cart-context'
+import { useWishlist } from '@/context/wishlist-context'
+import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 interface ProductCardProps {
   product: SerializedProduct
@@ -15,8 +18,17 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart()
+  const { toggle, isWishlisted } = useWishlist()
+  const { status } = useSession()
+  const router = useRouter()
   const [added, setAdded] = useState(false)
   const [imgError, setImgError] = useState(false)
+
+  async function handleWishlist(e: React.MouseEvent) {
+    e.preventDefault()
+    if (status !== 'authenticated') { router.push('/account/login'); return }
+    await toggle(product.id)
+  }
 
   const hasDiscount = product.salePrice != null && product.salePrice < product.price
   const discountPct = hasDiscount
@@ -105,23 +117,36 @@ export function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
           </div>
-          {product.stock > 0 ? (
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={handleAddToCart}
+              onClick={handleWishlist}
+              title={isWishlisted(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
               className={`p-2 rounded-lg transition-colors ${
-                added
-                  ? 'bg-green-500 text-white'
-                  : 'bg-brand/10 text-brand hover:bg-brand hover:text-white'
+                isWishlisted(product.id)
+                  ? 'bg-red-50 text-red-500'
+                  : 'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500'
               }`}
-              title="Add to Cart"
             >
-              {added ? <Check size={16} /> : <ShoppingCart size={16} />}
+              <Heart size={16} className={isWishlisted(product.id) ? 'fill-current' : ''} />
             </button>
-          ) : (
-            <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-1 rounded-lg">
-              Out of Stock
-            </span>
-          )}
+            {product.stock > 0 ? (
+              <button
+                onClick={handleAddToCart}
+                className={`p-2 rounded-lg transition-colors ${
+                  added
+                    ? 'bg-green-500 text-white'
+                    : 'bg-brand/10 text-brand hover:bg-brand hover:text-white'
+                }`}
+                title="Add to Cart"
+              >
+                {added ? <Check size={16} /> : <ShoppingCart size={16} />}
+              </button>
+            ) : (
+              <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-1 rounded-lg">
+                Out of Stock
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
