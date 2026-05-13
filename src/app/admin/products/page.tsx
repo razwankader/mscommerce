@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ import { DataTable } from '@/components/admin/data-table'
 import { formatPrice, formatDate } from '@/lib/utils'
 import Image from 'next/image'
 import { ProductModal } from './product-modal'
+import { BulkUploadModal } from './bulk-upload-modal'
 
 async function fetchProducts(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString()
@@ -33,6 +34,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
 
   const { data, isLoading } = useQuery({
@@ -132,9 +134,14 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-sm text-gray-500 mt-1">Manage your product catalog</p>
         </div>
-        <Button onClick={() => { setEditingProduct(null); setModalOpen(true) }}>
-          <Plus size={16} /> Add Product
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => setBulkUploadOpen(true)}>
+            <Upload size={16} /> Bulk Upload
+          </Button>
+          <Button onClick={() => { setEditingProduct(null); setModalOpen(true) }}>
+            <Plus size={16} /> Add Product
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3">
@@ -169,6 +176,13 @@ export default function ProductsPage() {
             setModalOpen(false)
             queryClient.invalidateQueries({ queryKey: ['products'] })
           }}
+        />
+      )}
+
+      {bulkUploadOpen && (
+        <BulkUploadModal
+          onClose={() => setBulkUploadOpen(false)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['products'] })}
         />
       )}
     </div>
