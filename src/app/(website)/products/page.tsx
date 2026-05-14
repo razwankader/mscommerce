@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/website/product-card'
+import { ProductFilters } from '@/components/website/product-filters'
 import { serializeProduct } from '@/lib/utils'
 import type { Metadata } from 'next'
 
@@ -64,90 +65,21 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
           {isBundle ? 'Bundle Offers' : isSale ? 'Sale — Up to 25% Off' : 'All Products'}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">{total} products found</p>
+        <p className="text-sm text-gray-500 mt-1 hidden md:block">{total} products found</p>
       </div>
       <div className="flex gap-8">
-        {/* Filters */}
-        <aside className="hidden md:block w-56 shrink-0">
-          <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-6">
-            {/* Offers filter */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Offers</h3>
-              <ul className="space-y-1.5">
-                <li>
-                  <a
-                    href={buildUrl({ sale: undefined, bundle: undefined, page: undefined })}
-                    className={`block text-sm px-2 py-1 rounded-lg transition-colors ${!isSale && !isBundle ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    All Products
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href={buildUrl({ sale: 'true', bundle: undefined, page: undefined })}
-                    className={`block text-sm px-2 py-1 rounded-lg transition-colors ${isSale ? 'bg-red-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    🏷️ On Sale
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href={buildUrl({ bundle: 'true', sale: undefined, page: undefined })}
-                    className={`block text-sm px-2 py-1 rounded-lg transition-colors ${isBundle ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    📦 Bundle Offers
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Categories</h3>
-              <ul className="space-y-1.5">
-                <li>
-                  <a
-                    href={buildUrl({ category: undefined, page: undefined })}
-                    className={`block text-sm px-2 py-1 rounded-lg transition-colors ${!params.category ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    All Categories
-                  </a>
-                </li>
-                {categories.map((cat) => (
-                  <li key={cat.id}>
-                    <a
-                      href={buildUrl({ category: cat.slug, page: undefined })}
-                      className={`block text-sm px-2 py-1 rounded-lg transition-colors ${params.category === cat.slug ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                      {cat.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {brands.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Brands</h3>
-                <ul className="space-y-1.5">
-                  {brands.map((brand) => (
-                    <li key={brand.id}>
-                      <a
-                        href={buildUrl({ brand: brand.slug, page: undefined })}
-                        className={`block text-sm px-2 py-1 rounded-lg transition-colors ${params.brand === brand.slug ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                      >
-                        {brand.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </aside>
+        <ProductFilters
+          params={params}
+          categories={categories}
+          brands={brands}
+          isSale={isSale}
+          isBundle={isBundle}
+          total={total}
+        />
 
         {/* Products grid */}
         <div className="flex-1">
