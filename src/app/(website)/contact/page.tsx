@@ -23,9 +23,9 @@ export default async function ContactPage() {
           </p>
           <div className="space-y-4">
             {[
-              { icon: Phone, label: 'Phone', value: s.site_phone || '01719-188784' },
-              { icon: Mail, label: 'Email', value: s.site_email || 'info@matinsanitary.com' },
-              { icon: MapPin, label: 'Address', value: s.site_address || '78/5, D.I.T Road, Malibagh, Dhaka-1217' },
+              { icon: Phone, label: 'Phone', value: s.site_phone || '01719-188784', href: `tel:${s.site_phone || '01719-188784'}` },
+              { icon: Mail, label: 'Email', value: s.site_email || 'info@matinsanitary.com', href: `mailto:${s.site_email || 'info@matinsanitary.com'}` },
+              { icon: MapPin, label: 'Address', value: s.site_address || '78/5, D.I.T Road, Malibagh, Dhaka-1217', href: 'https://maps.app.goo.gl/WHdv6t3ENjnrcaR87' },
               { icon: Clock, label: 'Hours', value: 'Mon–Sat: 9am – 7pm' },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-4">
@@ -34,7 +34,11 @@ export default async function ContactPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{item.label}</p>
-                  <p className="text-sm text-gray-700 mt-0.5">{item.value}</p>
+                  {item.href ? (
+                    <a href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="text-sm text-brand hover:underline mt-0.5 block">{item.value}</a>
+                  ) : (
+                    <p className="text-sm text-gray-700 mt-0.5">{item.value}</p>
+                  )}
                 </div>
               </div>
             ))}

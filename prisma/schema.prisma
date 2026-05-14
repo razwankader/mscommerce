@@ -153,6 +153,7 @@ model Product {
   categoryId  String?
   brandId     String?
   featured    Boolean       @default(false)
+  bundle      Boolean       @default(false)
   status      ProductStatus @default(ACTIVE)
   metaTitle   String?
   metaDesc    String?

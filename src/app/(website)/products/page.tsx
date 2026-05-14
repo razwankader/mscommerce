@@ -11,6 +11,7 @@ interface SearchParams {
   brand?: string
   featured?: string
   sale?: string
+  bundle?: string
   search?: string
 }
 
@@ -27,6 +28,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   if (params.sale === 'true') {
     where.salePrice = { not: null, gt: 0 }
   }
+  if (params.bundle === 'true') where.bundle = true
   if (params.search) {
     where.OR = [
       { name: { contains: params.search, mode: 'insensitive' } },
@@ -49,6 +51,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
   const totalPages = Math.ceil(total / limit)
   const isSale = params.sale === 'true'
+  const isBundle = params.bundle === 'true'
 
   function buildUrl(overrides: Partial<SearchParams>) {
     const merged = { ...params, ...overrides }
@@ -63,7 +66,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          {isSale ? 'Sale — Up to 25% Off' : 'All Products'}
+          {isBundle ? 'Bundle Offers' : isSale ? 'Sale — Up to 25% Off' : 'All Products'}
         </h1>
         <p className="text-sm text-gray-500 mt-1">{total} products found</p>
       </div>
@@ -71,24 +74,32 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         {/* Filters */}
         <aside className="hidden md:block w-56 shrink-0">
           <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-6">
-            {/* Sale filter */}
+            {/* Offers filter */}
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Offers</h3>
               <ul className="space-y-1.5">
                 <li>
                   <a
-                    href={buildUrl({ sale: undefined, page: undefined })}
-                    className={`block text-sm px-2 py-1 rounded-lg transition-colors ${!isSale ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                    href={buildUrl({ sale: undefined, bundle: undefined, page: undefined })}
+                    className={`block text-sm px-2 py-1 rounded-lg transition-colors ${!isSale && !isBundle ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                   >
                     All Products
                   </a>
                 </li>
                 <li>
                   <a
-                    href={buildUrl({ sale: 'true', page: undefined })}
+                    href={buildUrl({ sale: 'true', bundle: undefined, page: undefined })}
                     className={`block text-sm px-2 py-1 rounded-lg transition-colors ${isSale ? 'bg-red-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                   >
                     🏷️ On Sale
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={buildUrl({ bundle: 'true', sale: undefined, page: undefined })}
+                    className={`block text-sm px-2 py-1 rounded-lg transition-colors ${isBundle ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    📦 Bundle Offers
                   </a>
                 </li>
               </ul>
@@ -145,6 +156,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               <span className="text-red-500 font-bold text-sm">🏷️ Sale</span>
               <span className="text-sm text-red-700">Showing discounted products only</span>
               <a href="/products" className="ml-auto text-xs text-red-400 hover:text-red-600 underline">Clear</a>
+            </div>
+          )}
+          {isBundle && (
+            <div className="mb-4 flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
+              <span className="text-orange-500 font-bold text-sm">📦 Bundle Offers</span>
+              <span className="text-sm text-orange-700">Showing bundle products only</span>
+              <a href="/products" className="ml-auto text-xs text-orange-400 hover:text-orange-600 underline">Clear</a>
             </div>
           )}
           {products.length === 0 ? (

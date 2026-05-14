@@ -114,14 +114,14 @@ export function WebsiteHeader() {
       <div className="bg-gray-950 border-b border-gray-800 text-xs py-2 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center divide-x divide-gray-200">
-            <div className="flex items-center gap-1.5 pr-4">
+            <a href="tel:01719-188784" className="flex items-center gap-1.5 pr-4 hover:text-white transition-colors">
               <Phone size={11} className="text-orange-400" />
               <span className="text-gray-300 font-medium">01719-188784</span>
-            </div>
-            <div className="flex items-center gap-1.5 pl-4">
+            </a>
+            <a href="mailto:info@matinsanitary.com" className="flex items-center gap-1.5 pl-4 hover:text-white transition-colors">
               <Mail size={11} className="text-orange-400" />
               <span className="text-gray-400">info@matinsanitary.com</span>
-            </div>
+            </a>
           </div>
           <div className="hidden sm:flex items-center gap-1.5 text-gray-400">
             <Truck size={11} className="text-orange-400" />

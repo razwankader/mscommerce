@@ -30,6 +30,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
     categoryId: product?.categoryId || '',
     brandId: product?.brandId || '',
     featured: product?.featured || false,
+    bundle: product?.bundle || false,
     status: product?.status || 'ACTIVE',
     images: product?.images || [],
     metaTitle: product?.metaTitle || '',
@@ -199,17 +200,31 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
             placeholder="Detailed product description"
           />
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="featured"
-              checked={form.featured}
-              onChange={(e) => setForm({ ...form, featured: e.target.checked })}
-              className="rounded border-gray-300 text-brand focus:ring-brand"
-            />
-            <label htmlFor="featured" className="text-sm font-medium text-gray-700">
-              Featured product
-            </label>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="featured"
+                checked={form.featured}
+                onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+                className="rounded border-gray-300 text-brand focus:ring-brand"
+              />
+              <label htmlFor="featured" className="text-sm font-medium text-gray-700">
+                Featured product
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="bundle"
+                checked={form.bundle}
+                onChange={(e) => setForm({ ...form, bundle: e.target.checked })}
+                className="rounded border-gray-300 text-brand focus:ring-brand"
+              />
+              <label htmlFor="bundle" className="text-sm font-medium text-gray-700">
+                Bundle offer
+              </label>
+            </div>
           </div>
 
           {/* Images */}

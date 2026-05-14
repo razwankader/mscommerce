@@ -49,16 +49,18 @@ async function getBrands() {
 }
 
 export default async function HomePage() {
-  const [rawProducts, categories, banners, brands, rawNewArrivals, shippingConfig] = await Promise.all([
+  const [rawProducts, categories, banners, brands, rawNewArrivals, shippingConfig, phoneSetting] = await Promise.all([
     getFeaturedProducts(),
     getCategories(),
     getBanners(),
     getBrands(),
     getNewArrivals(),
     getShippingConfig(),
+    prisma.setting.findUnique({ where: { key: 'site_phone' } }),
   ])
   const products = rawProducts.map(serializeProduct)
   const newArrivals = rawNewArrivals.map(serializeProduct)
+  const phone = phoneSetting?.value || '01719-188784'
 
   return (
     <div>
@@ -75,20 +77,33 @@ export default async function HomePage() {
               sub: shippingConfig.threshold !== null
                 ? `On orders above ${formatPrice(shippingConfig.threshold)}`
                 : 'Delivered to your doorstep',
+              href: '/products',
             },
-            { icon: Shield, label: 'Genuine Products', sub: 'Manufacturer warranty' },
-            { icon: Award, label: 'Premium Brands', sub: 'Grohe, Kohler & more' },
-            { icon: Phone, label: 'Expert Support', sub: 'Mon-Sat 9am-7pm' },
+            { icon: Shield, label: 'Genuine Products', sub: 'Manufacturer warranty', href: '/products' },
+            { icon: Award, label: 'Premium Brands', sub: 'Grohe, Kohler & more', href: '#brands' },
+            { icon: Phone, label: 'Expert Support', sub: 'Mon-Sat 9am-7pm', href: `tel:${phone}` },
           ].map((f, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-xl p-2.5">
-                <f.icon size={20} />
+            f.href ? (
+              <a key={i} href={f.href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="bg-white/20 rounded-xl p-2.5">
+                  <f.icon size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{f.label}</p>
+                  <p className="text-xs text-orange-100">{f.sub}</p>
+                </div>
+              </a>
+            ) : (
+              <div key={i} className="flex items-center gap-3">
+                <div className="bg-white/20 rounded-xl p-2.5">
+                  <f.icon size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{f.label}</p>
+                  <p className="text-xs text-orange-100">{f.sub}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold">{f.label}</p>
-                <p className="text-xs text-orange-100">{f.sub}</p>
-              </div>
-            </div>
+            )
           ))}
         </div>
       </section>
@@ -201,7 +216,7 @@ export default async function HomePage() {
 
           {/* Banner 3 — Bundle Offer */}
           <Link
-            href="/contact"
+            href="/products?bundle=true"
             className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 to-teal-800 text-white p-8 flex items-center justify-between min-h-[180px] hover:shadow-xl transition-shadow"
           >
             <div className="absolute -right-6 -top-6 w-40 h-40 rounded-full bg-white/10 group-hover:scale-110 transition-transform duration-500" />
@@ -291,7 +306,7 @@ export default async function HomePage() {
 
       {/* Shop by Brand */}
       {brands.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 py-12">
+        <section id="brands" className="max-w-7xl mx-auto px-4 py-12">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Shop by Brand</h2>
@@ -340,13 +355,13 @@ export default async function HomePage() {
               Our team of experts is ready to help you choose the perfect products.
             </p>
           </div>
-          <Link
-            href="/contact"
+          <a
+            href={`tel:${phone}`}
             className="whitespace-nowrap inline-flex items-center gap-2 bg-white text-brand font-semibold px-6 py-3 rounded-xl hover:bg-orange-50 transition-colors"
           >
             <Phone size={18} />
-            Get in Touch
-          </Link>
+            Call Us
+          </a>
         </div>
       </section>
     </div>
