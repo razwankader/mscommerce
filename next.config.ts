@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'www.sanitary.pk' },
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'https', hostname: '*.cloudfront.net' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },
 }

@@ -1,7 +1,6 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import Google from 'next-auth/providers/google'
-import Facebook from 'next-auth/providers/facebook'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
@@ -15,10 +14,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    Facebook({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       name: 'credentials',
@@ -53,7 +49,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = dbUser?.id ?? user.id
       }
       if (trigger === 'update' && session) {
-        token.name = session.name
+        if (session.name) token.name = session.name
+        if (session.image) token.picture = session.image
       }
       return token
     },
@@ -75,6 +72,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   pages: {
-    signIn: '/login',
+    signIn: '/account/login',
   },
 })

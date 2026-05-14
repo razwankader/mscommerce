@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { generateOrderNumber } from '@/lib/utils'
 import { getShippingConfig, calcShipping } from '@/lib/shipping'
 import { revalidateTag } from 'next/cache'
+import { sendOrderConfirmationEmail } from '@/lib/email'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -113,6 +114,25 @@ export async function POST(req: NextRequest) {
     })
 
     revalidateTag('products')
+
+    if (email) {
+      sendOrderConfirmationEmail({
+        orderNumber: order.orderNumber,
+        firstName,
+        email,
+        items: order.orderItems.map((oi: any) => ({
+          productName: oi.product.name,
+          quantity: oi.quantity,
+          price: Number(oi.price),
+        })),
+        subtotal: Number(order.subtotal),
+        shipping: Number(order.shipping),
+        total: Number(order.total),
+        address,
+        city,
+      }).catch(err => console.error('[order-confirm-email]', err))
+    }
+
     return NextResponse.json(order, { status: 201 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Order failed' }, { status: 409 })

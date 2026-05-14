@@ -1,22 +1,48 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { Loader2, CheckCircle } from 'lucide-react'
+import { Loader2, CheckCircle, Camera } from 'lucide-react'
+import Image from 'next/image'
 
 export default function ProfilePage() {
   const { data: session, update } = useSession()
   const [form, setForm] = useState({ name: '', phone: '' })
+  const [image, setImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
+  const [avatarUploading, setAvatarUploading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/account/profile')
       .then(r => r.json())
-      .then(d => { setForm({ name: d.name || '', phone: d.phone || '' }); setFetching(false) })
+      .then(d => {
+        setForm({ name: d.name || '', phone: d.phone || '' })
+        setImage(d.image || null)
+        setFetching(false)
+      })
   }, [])
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/account/avatar', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (res.ok) {
+      setImage(data.url)
+      await update({ image: data.url })
+    } else {
+      setError(data.error || 'Image upload failed')
+    }
+    setAvatarUploading(false)
+    e.target.value = ''
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -42,10 +68,56 @@ export default function ProfilePage() {
     </div>
   )
 
+  const initials = form.name?.[0]?.toUpperCase() || '?'
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
       <h1 className="text-xl font-bold text-gray-900 mb-1">My Profile</h1>
       <p className="text-sm text-gray-500 mb-6">Manage your personal information</p>
+
+      {/* Avatar */}
+      <div className="flex items-center gap-5 mb-8">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="relative w-20 h-20 rounded-full overflow-hidden group focus:outline-none"
+          >
+            {image ? (
+              <Image src={image} alt="Profile" fill className="object-cover" unoptimized />
+            ) : (
+              <div className="w-full h-full bg-brand/10 flex items-center justify-center text-brand font-bold text-2xl">
+                {initials}
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+              {avatarUploading
+                ? <Loader2 size={18} className="text-white animate-spin" />
+                : <Camera size={18} className="text-white" />
+              }
+            </div>
+          </button>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-900">{form.name || 'Your Name'}</p>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={avatarUploading}
+            className="text-xs text-brand hover:underline mt-0.5 disabled:opacity-50"
+          >
+            {avatarUploading ? 'Uploading…' : 'Change photo'}
+          </button>
+          <p className="text-[11px] text-gray-400 mt-0.5">JPEG, PNG or WebP · max 2MB</p>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-5 max-w-md">
         <div>
