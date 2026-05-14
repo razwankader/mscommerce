@@ -203,12 +203,12 @@ export function WebsiteHeader() {
                   </>
                 )}
               </div>
-            ) : status === 'unauthenticated' ? (
+            ) : (
               <Link href="/account/login" className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-brand transition-colors">
                 <User size={16} className="text-gray-600" />
                 <span className="hidden sm:block">Sign In</span>
               </Link>
-            ) : null}
+            )}
 
             <button
               className="md:hidden p-2 rounded-xl border border-gray-200"
