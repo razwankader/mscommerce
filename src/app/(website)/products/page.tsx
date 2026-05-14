@@ -1,12 +1,13 @@
 import { prisma } from '@/lib/prisma'
-import { ProductCard } from '@/components/website/product-card'
 import { ProductFilters } from '@/components/website/product-filters'
+import { ProductGrid } from '@/components/website/product-grid'
 import { serializeProduct } from '@/lib/utils'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'All Products' }
 
 interface SearchParams {
+  [key: string]: string | undefined
   page?: string
   category?: string
   brand?: string
@@ -26,9 +27,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   if (params.category) where.category = { slug: params.category }
   if (params.brand) where.brand = { slug: params.brand }
   if (params.featured === 'true') where.featured = true
-  if (params.sale === 'true') {
-    where.salePrice = { not: null, gt: 0 }
-  }
+  if (params.sale === 'true') where.salePrice = { not: null, gt: 0 }
   if (params.bundle === 'true') where.bundle = true
   if (params.search) {
     where.OR = [
@@ -53,16 +52,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const totalPages = Math.ceil(total / limit)
   const isSale = params.sale === 'true'
   const isBundle = params.bundle === 'true'
-
-  function buildUrl(overrides: Partial<SearchParams>) {
-    const merged = { ...params, ...overrides }
-    const qs = Object.entries(merged)
-      .filter(([, v]) => v && v !== '1')
-      .map(([k, v]) => `${k}=${encodeURIComponent(v!)}`)
-      .join('&')
-    return `/products${qs ? '?' + qs : ''}`
-  }
-
   const title = isBundle ? 'Bundle Offers' : isSale ? 'Sale — Up to 25% Off' : 'All Products'
 
   return (
@@ -90,30 +79,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             <a href="/products" className="ml-auto text-xs text-orange-400 hover:text-orange-600 underline">Clear</a>
           </div>
         )}
-        {products.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">No products found.</div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-8">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <a
-                key={p}
-                href={buildUrl({ page: p === 1 ? undefined : String(p) })}
-                className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm border transition-colors ${
-                  p === page ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-700 hover:border-brand'
-                }`}
-              >
-                {p}
-              </a>
-            ))}
-          </div>
-        )}
+        <ProductGrid
+          initialProducts={products}
+          initialTotal={total}
+          initialPage={page}
+          totalPages={totalPages}
+          params={params}
+        />
       </ProductFilters>
     </div>
   )
