@@ -29,6 +29,7 @@ interface WishlistEntry {
 export default function WishlistPage() {
   const { addItem } = useCart()
   const { toggle } = useWishlist()
+  // Wishlist page is behind auth layout — user is always authenticated here
   const [items, setItems] = useState<WishlistEntry[]>([])
   const [loading, setLoading] = useState(true)
 

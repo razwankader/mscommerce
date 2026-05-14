@@ -25,6 +25,19 @@ async function send(to: string, subject: string, html: string) {
   await resend.emails.send({ from: FROM, to, subject, html: wrapper(html) })
 }
 
+export async function sendOtpEmail(email: string, otp: string) {
+  await send(email, `${otp} is your Matin Sanitary verification code`, `
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:8px">Verify your email</h2>
+    <p style="color:#555;font-size:14px;line-height:1.6;margin-bottom:24px">
+      Use the code below to verify your email address. It expires in <strong>10 minutes</strong>.
+    </p>
+    <div style="background:#f9f9f9;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;letter-spacing:8px;font-size:32px;font-weight:800;color:#f97316">
+      ${otp}
+    </div>
+    <p style="color:#999;font-size:12px">If you didn't request this, ignore this email.</p>
+  `)
+}
+
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   await send(email, 'Reset your password — Matin Sanitary', `
     <h2 style="font-size:18px;font-weight:700;margin-bottom:8px">Reset your password</h2>

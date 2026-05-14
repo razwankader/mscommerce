@@ -2,6 +2,8 @@
 
 import { ShoppingCart, Check } from 'lucide-react'
 import { useCart } from '@/context/cart-context'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -18,9 +20,15 @@ interface Props {
 
 export function AddToCartButton({ id, slug, name, price, salePrice, image, stock, hasRelations }: Props) {
   const { addItem } = useCart()
+  const { status } = useSession()
+  const router = useRouter()
   const [added, setAdded] = useState(false)
 
   function handle() {
+    if (status !== 'authenticated') {
+      router.push('/account/login')
+      return
+    }
     addItem({ id, slug, name, price, salePrice, image })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)

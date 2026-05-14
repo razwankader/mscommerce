@@ -37,6 +37,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   async function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
+    if (status !== 'authenticated') { router.push('/account/login'); return }
     addItem({
       id: product.id,
       slug: product.slug,

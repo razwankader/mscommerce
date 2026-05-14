@@ -11,6 +11,11 @@ export async function POST(req: NextRequest) {
   if (password.length < 6)
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
 
+  // Require verified OTP
+  const otpRecord = await prisma.emailOtp.findFirst({ where: { email, verified: true } })
+  if (!otpRecord)
+    return NextResponse.json({ error: 'Email not verified. Complete OTP verification first.' }, { status: 403 })
+
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing)
     return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
@@ -20,6 +25,8 @@ export async function POST(req: NextRequest) {
   await prisma.user.create({
     data: { name, email, password: hashed, phone: phone || null, role: 'CUSTOMER' },
   })
+
+  await prisma.emailOtp.deleteMany({ where: { email } })
 
   return NextResponse.json({ success: true }, { status: 201 })
 }

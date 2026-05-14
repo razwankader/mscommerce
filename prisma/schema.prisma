@@ -263,6 +263,17 @@ model OrderItem {
   @@map("order_items")
 }
 
+model EmailOtp {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  verified  Boolean  @default(false)
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@map("email_otps")
+}
+
 model WishlistItem {
   id        String   @id @default(cuid())
   userId    String

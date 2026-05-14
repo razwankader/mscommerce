@@ -3,8 +3,10 @@
 import { useCart } from '@/context/cart-context'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 function formatPrice(n: number) {
   return '৳' + n.toLocaleString('en-BD')
@@ -17,7 +19,15 @@ interface ShippingConfig {
 
 export default function CartPage() {
   const { items, count, total, removeItem, updateQty, clearCart } = useCart()
+  const { status } = useSession()
+  const router = useRouter()
   const [shipping, setShipping] = useState<ShippingConfig | null>(null)
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/account/login?callbackUrl=/cart')
+    }
+  }, [status, router])
 
   useEffect(() => {
     fetch('/api/shipping-config')
@@ -25,6 +35,14 @@ export default function CartPage() {
       .then(setShipping)
       .catch(() => setShipping({ threshold: null, cost: 150 }))
   }, [])
+
+  if (status === 'loading') return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <Loader2 size={24} className="animate-spin text-brand" />
+    </div>
+  )
+
+  if (status === 'unauthenticated') return null
 
   const deliveryFee = shipping
     ? (shipping.threshold !== null && total >= shipping.threshold ? 0 : shipping.cost)
