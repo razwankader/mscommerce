@@ -69,15 +69,17 @@ export function WebsiteFooter() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <MapPin size={14} className="mt-0.5 shrink-0 text-brand" />
-                78/5, D.I.T Road, Malibagh, Dhaka-1217
+                <a href="https://maps.app.goo.gl/WHdv6t3ENjnrcaR87" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                  78/5, D.I.T Road, Malibagh, Dhaka-1217
+                </a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={14} className="text-brand" />
-                01719-188784
+                <a href="tel:01719-188784" className="hover:text-white transition-colors">01719-188784</a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail size={14} className="text-brand" />
-                info@matinsanitary.com
+                <a href="mailto:info@matinsanitary.com" className="hover:text-white transition-colors">info@matinsanitary.com</a>
               </li>
             </ul>
           </div>
