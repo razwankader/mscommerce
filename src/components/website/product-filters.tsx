@@ -110,25 +110,25 @@ export function ProductFilters({ params, categories, brands, isSale, isBundle, t
 
   return (
     <>
-      {/* Topbar: title + count + mobile filter button */}
-      <div className="flex items-start justify-between mb-4 md:mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          <p className="text-sm text-gray-500 mt-1">{total} products found</p>
-        </div>
-        <button
-          onClick={() => setOpen(true)}
-          className="md:hidden flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:border-brand transition-colors shrink-0"
-        >
-          <SlidersHorizontal size={15} />
-          Filters
-          {activeCount > 0 && (
-            <span className="min-w-[18px] h-[18px] bg-brand text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-              {activeCount}
-            </span>
-          )}
-        </button>
+      {/* Topbar: title + count */}
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        <p className="text-sm text-gray-500 mt-1">{total} products found</p>
       </div>
+
+      {/* Floating filter button — mobile only */}
+      <button
+        onClick={() => setOpen(true)}
+        className="md:hidden fixed bottom-6 right-4 z-30 flex items-center gap-2 bg-brand text-white rounded-full px-4 py-3 text-sm font-semibold shadow-lg hover:bg-brand-dark transition-colors"
+      >
+        <SlidersHorizontal size={16} />
+        Filters
+        {activeCount > 0 && (
+          <span className="min-w-[18px] h-[18px] bg-white text-brand text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+            {activeCount}
+          </span>
+        )}
+      </button>
 
       {/* Mobile drawer */}
       {open && (
