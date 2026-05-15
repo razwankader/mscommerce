@@ -56,11 +56,8 @@ function MobileMenu({ categories, onClose }: { categories: NavCategory[]; onClos
       <Link href="/about" className="block py-2.5 text-sm font-medium text-gray-700 hover:text-brand border-b border-gray-100" onClick={onClose}>
         About
       </Link>
-      <Link href="/contact" className="block py-2.5 text-sm font-semibold text-brand border-b border-gray-100" onClick={onClose}>
+      <Link href="/contact" className="block py-2.5 text-sm font-semibold text-brand" onClick={onClose}>
         Contact Us
-      </Link>
-      <Link href="/account/login" className="block py-2.5 text-sm font-medium text-gray-700 hover:text-brand" onClick={onClose}>
-        Sign In / Register
       </Link>
     </div>
   )
