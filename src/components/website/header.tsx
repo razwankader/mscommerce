@@ -17,7 +17,7 @@ function MobileMenu({ categories, onClose }: { categories: NavCategory[]; onClos
         <div key={cat.id} className="border-b border-gray-100">
           <div className="flex items-center justify-between">
             <Link
-              href={`/categories/${cat.slug}`}
+              href={`/products?category=${cat.slug}`}
               className="flex-1 py-2.5 text-sm font-medium text-gray-700 hover:text-brand"
               onClick={onClose}
             >
@@ -37,7 +37,7 @@ function MobileMenu({ categories, onClose }: { categories: NavCategory[]; onClos
               {cat.children.map((sub) => (
                 <Link
                   key={sub.id}
-                  href={`/categories/${sub.slug}`}
+                  href={`/products?category=${sub.slug}`}
                   className="flex items-center gap-2 py-2 text-sm text-gray-500 hover:text-brand"
                   onClick={onClose}
                 >
@@ -230,7 +230,7 @@ export function WebsiteHeader() {
           {categories.map((cat) => (
             <div key={cat.id} className="relative group">
               <Link
-                href={`/categories/${cat.slug}`}
+                href={`/products?category=${cat.slug}`}
                 className="relative flex items-center gap-1 px-5 py-3.5 text-sm font-medium text-gray-300 hover:text-white transition-colors"
               >
                 {cat.name}
@@ -245,7 +245,7 @@ export function WebsiteHeader() {
                   {cat.children.map((sub) => (
                     <Link
                       key={sub.id}
-                      href={`/categories/${sub.slug}`}
+                      href={`/products?category=${sub.slug}`}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:bg-orange-50 hover:text-brand transition-colors"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-brand/40 shrink-0" />
