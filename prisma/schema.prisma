@@ -29,6 +29,13 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum StockTransactionType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  RETURN
+}
+
 enum RelationType {
   RELATED
   ACCESSORY
@@ -58,10 +65,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  orders        Order[]
-  reviews       Review[]
-  accounts      Account[]
-  wishlistItems WishlistItem[]
+  orders            Order[]
+  reviews           Review[]
+  accounts          Account[]
+  wishlistItems     WishlistItem[]
+  stockTransactions StockTransaction[]
 
   @@map("users")
 }
@@ -160,13 +168,14 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  category      Category?         @relation(fields: [categoryId], references: [id])
-  brand         Brand?            @relation(fields: [brandId], references: [id])
-  orderItems    OrderItem[]
-  reviews       Review[]
-  relations     ProductRelation[] @relation("ProductRelations")
-  relatedTo     ProductRelation[] @relation("RelatedTo")
-  wishlistItems WishlistItem[]
+  category          Category?            @relation(fields: [categoryId], references: [id])
+  brand             Brand?               @relation(fields: [brandId], references: [id])
+  orderItems        OrderItem[]
+  reviews           Review[]
+  relations         ProductRelation[]    @relation("ProductRelations")
+  relatedTo         ProductRelation[]    @relation("RelatedTo")
+  wishlistItems     WishlistItem[]
+  stockTransactions StockTransaction[]
 
   @@map("products")
 }
@@ -245,8 +254,9 @@ model Order {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  user       User?       @relation(fields: [userId], references: [id])
-  orderItems OrderItem[]
+  user              User?              @relation(fields: [userId], references: [id])
+  orderItems        OrderItem[]
+  stockTransactions StockTransaction[]
 
   @@map("orders")
 }
@@ -286,6 +296,25 @@ model WishlistItem {
 
   @@unique([userId, productId])
   @@map("wishlist_items")
+}
+
+model StockTransaction {
+  id           String               @id @default(cuid())
+  productId    String
+  type         StockTransactionType
+  quantity     Int
+  balanceAfter Int
+  note         String?
+  orderId      String?
+  createdBy    String?
+  createdAt    DateTime             @default(now())
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order     Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdByUser User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@map("stock_transactions")
 }
 
 model Review {

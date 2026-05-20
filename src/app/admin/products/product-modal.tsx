@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { ProductRelations } from './product-relations'
+import { StockTab } from './stock-tab'
 
 interface ProductModalProps {
   product?: any
@@ -16,7 +17,7 @@ interface ProductModalProps {
 
 export function ProductModal({ product, onClose, onSuccess }: ProductModalProps) {
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'details' | 'relations'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'relations' | 'stock'>('details')
   const [categories, setCategories] = useState<any[]>([])
   const [brands, setBrands] = useState<any[]>([])
   const [form, setForm] = useState({
@@ -92,7 +93,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
         {/* Tabs — only for edit mode */}
         {product && (
           <div className="flex border-b border-gray-100 px-6">
-            {(['details', 'relations'] as const).map((tab) => (
+            {(['details', 'stock', 'relations'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -103,7 +104,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {tab === 'relations' ? 'Related Products' : 'Details'}
+                {tab === 'relations' ? 'Related Products' : tab === 'stock' ? 'Stock' : 'Details'}
               </button>
             ))}
           </div>
@@ -112,6 +113,10 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
         {product && activeTab === 'relations' ? (
           <div className="p-6">
             <ProductRelations productId={product.id} />
+          </div>
+        ) : product && activeTab === 'stock' ? (
+          <div className="p-6">
+            <StockTab productId={product.id} currentStock={product.stock ?? 0} />
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="p-6 space-y-5">

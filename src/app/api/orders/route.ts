@@ -79,18 +79,22 @@ export async function POST(req: NextRequest) {
   try {
     const order = await prisma.$transaction(async (tx) => {
       // Atomic stock decrement — WHERE stock >= quantity prevents overselling under concurrency
+      const stockSnapshots: Record<string, number> = {}
       for (const item of items) {
-        const result = await tx.product.updateMany({
-          where: { id: item.productId, stock: { gte: item.quantity } },
-          data: { stock: { decrement: item.quantity } },
-        })
-        if (result.count === 0) {
+        const before = await tx.product.findUnique({ where: { id: item.productId }, select: { stock: true } })
+        if (!before || before.stock < item.quantity) {
           const product = products.find((p) => p.id === item.productId)
           throw new Error(`Insufficient stock for "${product?.name ?? item.productId}"`)
         }
+        const updated = await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+          select: { stock: true },
+        })
+        stockSnapshots[item.productId] = updated.stock
       }
 
-      return tx.order.create({
+      const order = await tx.order.create({
         data: {
           orderNumber: generateOrderNumber(),
           userId: session?.user?.id || null,
@@ -111,6 +115,20 @@ export async function POST(req: NextRequest) {
         },
         include: { orderItems: { include: { product: true } } },
       })
+
+      // Log SALE stock transactions
+      await tx.stockTransaction.createMany({
+        data: items.map((item: any) => ({
+          productId: item.productId,
+          type: 'SALE' as const,
+          quantity: -item.quantity,
+          balanceAfter: stockSnapshots[item.productId],
+          orderId: order.id,
+          note: `Order ${order.orderNumber}`,
+        })),
+      })
+
+      return order
     })
 
     revalidateTag('products')
