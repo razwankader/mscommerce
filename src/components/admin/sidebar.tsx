@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/logo'
 import {
@@ -10,50 +11,70 @@ import {
   FileText,
   ShoppingCart,
   Users,
-  Settings,
   ChevronDown,
   Store,
   ScanBarcode,
+  Shield,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
 
-const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+type NavChild = { href: string; label: string; permission?: string }
+type NavLeaf  = { href: string; label: string; icon: any; exact?: boolean; permission?: string }
+type NavGroup = { label: string; icon: any; children: NavChild[] }
+type NavItem  = NavLeaf | NavGroup
+
+const navItems: NavItem[] = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, permission: 'dashboard.view' },
   {
-    label: 'Catalog',
-    icon: Package,
+    label: 'Catalog', icon: Package,
     children: [
-      { href: '/admin/products', label: 'Products' },
-      { href: '/admin/categories', label: 'Categories' },
-      { href: '/admin/brands', label: 'Brands' },
+      { href: '/admin/products',   label: 'Products',   permission: 'products.manage'   },
+      { href: '/admin/categories', label: 'Categories', permission: 'categories.manage' },
+      { href: '/admin/brands',     label: 'Brands',     permission: 'brands.manage'     },
     ],
   },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/admin/stock', label: 'Stock Scanner', icon: ScanBarcode },
-  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/orders', label: 'Orders',        icon: ShoppingCart, permission: 'orders.manage' },
+  { href: '/admin/stock',  label: 'Stock Scanner', icon: ScanBarcode,  permission: 'stock.manage'  },
+  { href: '/admin/users',  label: 'Users',         icon: Users,        permission: 'users.manage'  },
   {
-    label: 'Content',
-    icon: FileText,
+    label: 'Content', icon: FileText,
     children: [
-      { href: '/admin/banners', label: 'Banners' },
-      { href: '/admin/pages', label: 'Pages' },
+      { href: '/admin/banners', label: 'Banners', permission: 'banners.manage' },
+      { href: '/admin/pages',   label: 'Pages',   permission: 'pages.manage'   },
     ],
   },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  {
+    label: 'Administration', icon: Shield,
+    children: [
+      { href: '/admin/roles',    label: 'Roles & Permissions', permission: 'roles.manage'    },
+      { href: '/admin/settings', label: 'Settings',            permission: 'settings.manage' },
+    ],
+  },
 ]
 
-function NavItem({ item, depth = 0, onNavClick }: { item: (typeof navItems)[0]; depth?: number; onNavClick?: () => void }) {
+function NavItemComponent({
+  item,
+  permissions,
+  onNavClick,
+}: {
+  item: NavItem
+  permissions: string[]
+  onNavClick?: () => void
+}) {
   const pathname = usePathname()
-  const [open, setOpen] = useState(() => {
-    if ('children' in item && item.children) {
-      return item.children.some((c) => pathname.startsWith(c.href))
-    }
-    return false
-  })
 
-  if ('children' in item && item.children) {
-    const isActive = item.children.some((c) => pathname.startsWith(c.href))
+  function isChildVisible(child: NavChild) {
+    return !child.permission || permissions.includes(child.permission)
+  }
+
+  if ('children' in item) {
+    const visibleChildren = item.children.filter(isChildVisible)
+    if (visibleChildren.length === 0) return null
+
+    const isActive = visibleChildren.some(c => pathname.startsWith(c.href))
+    const [open, setOpen] = useState(() => visibleChildren.some(c => pathname.startsWith(c.href)))
+
     return (
       <div>
         <button
@@ -71,7 +92,7 @@ function NavItem({ item, depth = 0, onNavClick }: { item: (typeof navItems)[0]; 
         </button>
         {open && (
           <div className="mt-1 ml-4 space-y-1 border-l border-gray-200 pl-3">
-            {item.children.map((child) => (
+            {visibleChildren.map(child => (
               <Link
                 key={child.href}
                 href={child.href}
@@ -93,6 +114,7 @@ function NavItem({ item, depth = 0, onNavClick }: { item: (typeof navItems)[0]; 
   }
 
   if ('href' in item) {
+    if (item.permission && !permissions.includes(item.permission)) return null
     const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
     return (
       <Link
@@ -118,6 +140,9 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
+  const { data: session } = useSession()
+  const permissions = (session?.user?.permissions ?? []) as string[]
+
   const SidebarContent = () => (
     <aside className="flex flex-col h-full">
       <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -133,7 +158,7 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {navItems.map((item, i) => (
-          <NavItem key={i} item={item} onNavClick={onClose} />
+          <NavItemComponent key={i} item={item} permissions={permissions} onNavClick={onClose} />
         ))}
       </nav>
       <div className="border-t border-gray-100 px-3 py-3">

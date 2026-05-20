@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, ProductStatus, BannerStatus, PageStatus } from '@prisma/client'
+import { PrismaClient, ProductStatus, BannerStatus, PageStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -15,7 +15,7 @@ async function main() {
       name: 'Admin User',
       email: 'admin@matinsanitary.com',
       password: adminPassword,
-      role: UserRole.ADMIN,
+      role: 'ADMIN',
     },
   })
   console.log('Admin created:', admin.email)

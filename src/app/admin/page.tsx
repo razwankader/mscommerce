@@ -1,8 +1,10 @@
+export const dynamic = 'force-dynamic'
+
 import { prisma } from '@/lib/prisma'
 import { StatCard } from '@/components/admin/stat-card'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingCart, Users, Package, DollarSign } from 'lucide-react'
+import { ShoppingCart, Users, Package, DollarSign, ShieldOff } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -64,11 +66,22 @@ const orderStatusVariant: Record<string, 'default' | 'success' | 'warning' | 'da
   REFUNDED: 'danger',
 }
 
-export default async function AdminDashboard() {
-  const data = await getDashboardData()
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ denied?: string }>
+}) {
+  const [data, sp] = await Promise.all([getDashboardData(), searchParams])
+  const accessDenied = sp.denied === '1'
 
   return (
     <div className="space-y-6">
+      {accessDenied && (
+        <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <ShieldOff size={16} className="shrink-0 text-red-500" />
+          <span>You don&apos;t have permission to access that section.</span>
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1">Overview of your store performance</p>

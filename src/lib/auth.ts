@@ -47,10 +47,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const dbUser = await prisma.user.findUnique({ where: { email: user.email! } })
         token.role = dbUser?.role ?? 'CUSTOMER'
         token.id = dbUser?.id ?? user.id
+
+        // Fetch permissions for this role from DB
+        const roleRecord = await prisma.role.findUnique({
+          where: { name: token.role as string },
+          include: { permissions: { include: { permission: true } } },
+        }).catch(() => null)
+        token.permissions = roleRecord?.permissions.map(rp => rp.permission.key) ?? []
       }
       if (trigger === 'update' && session) {
         if (session.name) token.name = session.name
         if (session.image) token.picture = session.image
+        if (session.refreshPermissions) {
+          // Re-fetch permissions on explicit refresh request
+          const roleRecord = await prisma.role.findUnique({
+            where: { name: token.role as string },
+            include: { permissions: { include: { permission: true } } },
+          }).catch(() => null)
+          token.permissions = roleRecord?.permissions.map(rp => rp.permission.key) ?? []
+        }
       }
       return token
     },
@@ -58,6 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        session.user.permissions = token.permissions as string[]
       }
       return session
     },

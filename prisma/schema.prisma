@@ -7,12 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  ADMIN
-  MANAGER
-  CUSTOMER
-}
-
 enum ProductStatus {
   ACTIVE
   INACTIVE
@@ -58,7 +52,7 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   password      String?
-  role          UserRole  @default(CUSTOMER)
+  role          String    @default("CUSTOMER")
   phone         String?
   image         String?
   isActive      Boolean   @default(true)
@@ -331,4 +325,40 @@ model Review {
   user    User    @relation(fields: [userId], references: [id])
 
   @@map("reviews")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  label       String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id    String @id @default(cuid())
+  key   String @unique
+  label String
+  group String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
 }

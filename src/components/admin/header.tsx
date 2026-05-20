@@ -41,7 +41,13 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-xs font-medium text-gray-900">{session?.user?.name}</p>
-              <p className="text-xs text-gray-500 capitalize">{session?.user?.role?.toLowerCase()}</p>
+              <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none ${
+                session?.user?.role === 'ADMIN'
+                  ? 'bg-brand/10 text-brand'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {session?.user?.role}
+              </span>
             </div>
           </button>
           {dropdownOpen && (
