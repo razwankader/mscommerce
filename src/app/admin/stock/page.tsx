@@ -132,25 +132,27 @@ export default function StockScanPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="max-w-lg mx-auto px-3 sm:px-4 py-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Stock Scanner</h1>
         <p className="text-sm text-gray-500 mt-1">Scan barcode or SKU to log stock in / out</p>
       </div>
 
       {/* Mode toggle */}
-      <div className="flex gap-2 mb-6">
+      <div className="grid grid-cols-2 gap-2 mb-6">
         <button
           onClick={() => { setMode('camera'); reset() }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors ${mode === 'camera' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
+          className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium border transition-colors ${mode === 'camera' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
         >
-          <Camera size={16} /> Camera Scan
+          <Camera size={16} className="shrink-0" />
+          <span>Camera Scan</span>
         </button>
         <button
           onClick={() => { setMode('manual'); reset() }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors ${mode === 'manual' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
+          className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium border transition-colors ${mode === 'manual' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
         >
-          <Keyboard size={16} /> Manual / USB Scanner
+          <Keyboard size={16} className="shrink-0" />
+          <span className="leading-tight text-center">Manual /<br className="sm:hidden" /> USB Scanner</span>
         </button>
       </div>
 
@@ -181,14 +183,15 @@ export default function StockScanPage() {
           <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
             USB/Bluetooth barcode scanners work automatically — just scan. Or type the code below.
           </p>
-          <form onSubmit={(e) => { e.preventDefault(); lookup(manualCode) }} className="flex gap-2">
+          <form onSubmit={(e) => { e.preventDefault(); lookup(manualCode) }} className="flex flex-col sm:flex-row gap-2">
             <Input
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
               placeholder="Barcode or SKU"
               autoFocus
+              className="flex-1"
             />
-            <Button type="submit" loading={looking}>Look up</Button>
+            <Button type="submit" loading={looking} className="sm:w-auto w-full">Look up</Button>
           </form>
         </div>
       )}
