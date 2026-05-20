@@ -30,6 +30,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
     stock: product?.stock || 0,
     categoryId: product?.categoryId || '',
     brandId: product?.brandId || '',
+    barcode: product?.barcode || '',
     featured: product?.featured || false,
     bundle: product?.bundle || false,
     status: product?.status || 'ACTIVE',
@@ -67,7 +68,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, price: Number(form.price), salePrice: form.salePrice ? Number(form.salePrice) : null, stock: Number(form.stock) }),
+        body: JSON.stringify({ ...form, price: Number(form.price), salePrice: form.salePrice ? Number(form.salePrice) : null, stock: Number(form.stock), barcode: form.barcode || null }),
       })
       if (!res.ok) throw new Error(await res.text())
       onSuccess()
@@ -150,6 +151,12 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
               value={form.sku}
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
               placeholder="e.g. TMP-001"
+            />
+            <Input
+              label="Barcode (EAN / UPC)"
+              value={form.barcode}
+              onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+              placeholder="e.g. 8901234567890"
             />
             <Input
               label="Stock"

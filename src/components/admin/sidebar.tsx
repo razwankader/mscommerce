@@ -16,6 +16,7 @@ import {
   Settings,
   ChevronDown,
   Store,
+  ScanBarcode,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -31,6 +32,7 @@ const navItems = [
     ],
   },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/admin/stock', label: 'Stock Scanner', icon: ScanBarcode },
   { href: '/admin/users', label: 'Users', icon: Users },
   {
     label: 'Content',

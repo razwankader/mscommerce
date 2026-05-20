@@ -154,6 +154,7 @@ model Product {
   description String?
   shortDesc   String?
   sku         String?       @unique
+  barcode     String?       @unique
   price       Decimal       @db.Decimal(10, 2)
   salePrice   Decimal?      @db.Decimal(10, 2)
   stock       Int           @default(0)
