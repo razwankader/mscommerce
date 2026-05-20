@@ -129,14 +129,14 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-sm text-gray-500 mt-1">Manage your product catalog</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button variant="secondary" onClick={() => setBulkUploadOpen(true)}>
-            <Upload size={16} /> Bulk Upload
+            <Upload size={16} /> <span className="hidden sm:inline">Bulk Upload</span>
           </Button>
           <Button onClick={() => { setEditingProduct(null); setModalOpen(true) }}>
             <Plus size={16} /> Add Product

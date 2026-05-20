@@ -7,9 +7,6 @@ import { Logo } from '@/components/ui/logo'
 import {
   LayoutDashboard,
   Package,
-  Tag,
-  Award,
-  Image,
   FileText,
   ShoppingCart,
   Users,
@@ -17,6 +14,7 @@ import {
   ChevronDown,
   Store,
   ScanBarcode,
+  X,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -45,7 +43,7 @@ const navItems = [
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 
-function NavItem({ item, depth = 0 }: { item: (typeof navItems)[0]; depth?: number }) {
+function NavItem({ item, depth = 0, onNavClick }: { item: (typeof navItems)[0]; depth?: number; onNavClick?: () => void }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(() => {
     if ('children' in item && item.children) {
@@ -77,6 +75,7 @@ function NavItem({ item, depth = 0 }: { item: (typeof navItems)[0]; depth?: numb
               <Link
                 key={child.href}
                 href={child.href}
+                onClick={onNavClick}
                 className={cn(
                   'block rounded-lg px-3 py-2 text-sm transition-colors',
                   pathname.startsWith(child.href)
@@ -98,6 +97,7 @@ function NavItem({ item, depth = 0 }: { item: (typeof navItems)[0]; depth?: numb
     return (
       <Link
         href={item.href}
+        onClick={onNavClick}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
           isActive ? 'bg-brand text-white font-medium' : 'text-gray-600 hover:bg-gray-100'
@@ -112,22 +112,35 @@ function NavItem({ item, depth = 0 }: { item: (typeof navItems)[0]; depth?: numb
   return null
 }
 
-export function AdminSidebar() {
-  return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-gray-200 bg-white flex flex-col">
-      <div className="px-4 py-4 border-b border-gray-100">
-        <Logo size="sm" />
-        <p className="text-xs text-gray-400 mt-1.5 pl-0.5">Admin Panel</p>
+interface AdminSidebarProps {
+  open?: boolean
+  onClose?: () => void
+}
+
+export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
+  const SidebarContent = () => (
+    <aside className="flex flex-col h-full">
+      <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <Logo size="sm" />
+          <p className="text-xs text-gray-400 mt-1.5 pl-0.5">Admin Panel</p>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+            <X size={18} />
+          </button>
+        )}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {navItems.map((item, i) => (
-          <NavItem key={i} item={item} />
+          <NavItem key={i} item={item} onNavClick={onClose} />
         ))}
       </nav>
       <div className="border-t border-gray-100 px-3 py-3">
         <Link
           href="/"
           target="_blank"
+          onClick={onClose}
           className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-gray-500 hover:bg-gray-100 transition-colors"
         >
           <Store size={14} />
@@ -135,5 +148,24 @@ export function AdminSidebar() {
         </Link>
       </div>
     </aside>
+  )
+
+  return (
+    <>
+      {/* Desktop: fixed sidebar */}
+      <div className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 border-r border-gray-200 bg-white flex-col">
+        <SidebarContent />
+      </div>
+
+      {/* Mobile: drawer */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={onClose} />
+          <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl md:hidden">
+            <SidebarContent />
+          </div>
+        </>
+      )}
+    </>
   )
 }
