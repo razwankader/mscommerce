@@ -13,9 +13,10 @@ interface UploadResult {
 }
 
 const CSV_TEMPLATE = [
-  'name,sku,price,salePrice,stock,status,featured,categorySlug,brandSlug,shortDesc,description,images,metaTitle,metaDesc,relatedSkus,accessorySkus,fittingSkus',
-  '"Premium Basin Mixer",TMP-001,4500,3999,50,ACTIVE,false,bathroom-fittings,toto,"High-quality chrome basin mixer","Single-lever basin mixer with ceramic cartridge. Chrome finish. Suitable for standard basin installations. Easy to clean and durable.",https://example.com/img1.jpg|https://example.com/img2.jpg,"Premium Basin Mixer | Brand","Best basin mixer for your bathroom",,TMP-002,',
-  '"Bottle Trap",TMP-002,650,,100,ACTIVE,false,bathroom-accessories,,,"Bottle trap for basin waste connection","P-type bottle trap with adjustable height. Compatible with most basin waste outlets. Chrome plated finish.",,,,,'
+  'name,sku,barcode,price,salePrice,stock,status,featured,bundle,categorySlug,brandSlug,shortDesc,description,images,metaTitle,metaDesc,relatedSkus,accessorySkus,fittingSkus',
+  '"Premium Basin Mixer",TMP-001,8901234567890,4500,3999,50,ACTIVE,false,false,bathroom-fittings,toto,"High-quality chrome basin mixer","Single-lever basin mixer with ceramic cartridge. Chrome finish. Suitable for standard basin installations. Easy to clean and durable.",https://example.com/img1.jpg|https://example.com/img2.jpg,"Premium Basin Mixer | Brand","Best basin mixer for your bathroom",,TMP-002,',
+  '"Bottle Trap",TMP-002,,650,,100,ACTIVE,false,false,bathroom-accessories,,,"Bottle trap for basin waste connection","P-type bottle trap with adjustable height. Compatible with most basin waste outlets. Chrome plated finish.",,,,,',
+  '"Basin & Mixer Bundle",BDL-003,8909876543210,5000,4500,20,ACTIVE,true,true,bathroom-fittings,toto,"Basin and mixer combo bundle","Complete bundle including pedestal basin and single-lever mixer. Ideal for new bathroom installations.",https://example.com/bundle.jpg,"Basin Mixer Bundle","Complete basin and mixer bundle",TMP-001,,'
 ].join('\n')
 
 export function BulkUploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {

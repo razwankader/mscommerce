@@ -8,11 +8,13 @@ import Papa from 'papaparse'
 interface CsvRow {
   name: string
   sku: string
+  barcode: string
   price: string
   salePrice: string
   stock: string
   status: string
   featured: string
+  bundle: string
   categorySlug: string
   brandSlug: string
   shortDesc: string
@@ -92,11 +94,14 @@ export async function POST(req: NextRequest) {
     try {
       const existing = await prisma.product.findUnique({ where: { sku: row.sku }, select: { id: true } })
 
+      const barcode = row.barcode || null
+      const bundle = row.bundle?.toLowerCase() === 'true'
+
       if (existing) {
         await prisma.product.update({
           where: { sku: row.sku },
-          data: { name: row.name, price, salePrice, stock, status, featured, images, categoryId, brandId,
-            shortDesc: row.shortDesc || null, description: row.description || null,
+          data: { name: row.name, price, salePrice, stock, status, featured, bundle, images, categoryId, brandId,
+            barcode, shortDesc: row.shortDesc || null, description: row.description || null,
             metaTitle: row.metaTitle || null, metaDesc: row.metaDesc || null },
         })
         skuToId.set(row.sku, existing.id)
@@ -104,8 +109,8 @@ export async function POST(req: NextRequest) {
       } else {
         const slug = slugify(row.name) + '-' + Date.now() + '-' + i
         const created = await prisma.product.create({
-          data: { name: row.name, slug, sku: row.sku, price, salePrice, stock, status, featured, images,
-            categoryId, brandId, shortDesc: row.shortDesc || null, description: row.description || null,
+          data: { name: row.name, slug, sku: row.sku, price, salePrice, stock, status, featured, bundle, images,
+            categoryId, brandId, barcode, shortDesc: row.shortDesc || null, description: row.description || null,
             metaTitle: row.metaTitle || null, metaDesc: row.metaDesc || null },
         })
         skuToId.set(row.sku, created.id)
