@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   })
   if (!role) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const userCount = await prisma.user.count({ where: { role: role.name } })
+  const userCount = await prisma.user.count({ where: { roleId: id } })
 
   return NextResponse.json({
     id: role.id,
@@ -76,7 +76,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     include: { permissions: { include: { permission: true } } },
   })
 
-  const userCount = await prisma.user.count({ where: { role: updated.name } })
+  const userCount = await prisma.user.count({ where: { roleId: updated.id } })
 
   return NextResponse.json({
     id: updated.id,
@@ -103,7 +103,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'System roles cannot be deleted' }, { status: 400 })
   }
 
-  const userCount = await prisma.user.count({ where: { role: role.name } })
+  const userCount = await prisma.user.count({ where: { roleId: id } })
   if (userCount > 0) {
     return NextResponse.json(
       { error: `Cannot delete role: ${userCount} user(s) are assigned to it` },

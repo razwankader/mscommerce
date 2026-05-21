@@ -6,6 +6,21 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
+  // Ensure ADMIN role exists (seed RBAC first if needed)
+  let adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
+  if (!adminRole) {
+    console.log('Seeding roles first...')
+    await prisma.role.createMany({
+      data: [
+        { name: 'ADMIN',    label: 'Administrator', description: 'Full access', isSystem: true },
+        { name: 'MANAGER',  label: 'Manager',       description: 'Catalog, orders, content', isSystem: true },
+        { name: 'CUSTOMER', label: 'Customer',      description: 'Regular customer', isSystem: true },
+      ],
+      skipDuplicates: true,
+    })
+    adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
+  }
+
   // Admin user
   const adminPassword = await bcrypt.hash('admin123', 12)
   const admin = await prisma.user.upsert({
@@ -15,7 +30,7 @@ async function main() {
       name: 'Admin User',
       email: 'admin@matinsanitary.com',
       password: adminPassword,
-      role: 'ADMIN',
+      roleId: adminRole!.id,
     },
   })
   console.log('Admin created:', admin.email)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
-import { seedSystemRoles } from '../permissions/route'
+import { seedPermissionsAndRoles } from '@/lib/seed-rbac'
 
 function requireRolesManage(session: any) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -18,19 +18,8 @@ export async function GET() {
   const denied = requireRolesManage(session)
   if (denied) return denied
 
-  // Auto-seed if first run
-  const permCount = await prisma.permission.count()
-  if (permCount === 0) {
-    await prisma.permission.createMany({
-      data: (await import('@/lib/permissions')).PERMISSION_DEFINITIONS.map(p => ({
-        key: p.key,
-        label: p.label,
-        group: p.group,
-      })),
-      skipDuplicates: true,
-    })
-    await seedSystemRoles()
-  }
+  // Auto-seed on first run
+  await seedPermissionsAndRoles()
 
   const roles = await prisma.role.findMany({
     include: {
@@ -41,12 +30,12 @@ export async function GET() {
     orderBy: { createdAt: 'asc' },
   })
 
-  // Get user counts per role name
+  // Get user counts per roleId
   const userCounts = await prisma.user.groupBy({
-    by: ['role'],
+    by: ['roleId'],
     _count: { id: true },
   })
-  const userCountMap = Object.fromEntries(userCounts.map(r => [r.role, r._count.id]))
+  const userCountMap = Object.fromEntries(userCounts.map(r => [r.roleId, r._count.id]))
 
   const result = roles.map(role => ({
     id: role.id,
@@ -56,7 +45,7 @@ export async function GET() {
     isSystem: role.isSystem,
     createdAt: role.createdAt,
     permissions: role.permissions.map(rp => rp.permission.key),
-    userCount: userCountMap[role.name] ?? 0,
+    userCount: userCountMap[role.id] ?? 0,
   }))
 
   return NextResponse.json(result)

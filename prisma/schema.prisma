@@ -52,13 +52,14 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   password      String?
-  role          String    @default("CUSTOMER")
+  roleId        String
   phone         String?
   image         String?
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  roleRef           Role               @relation(fields: [roleId], references: [id])
   orders            Order[]
   reviews           Review[]
   accounts          Account[]
@@ -336,6 +337,7 @@ model Role {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  users       User[]
   permissions RolePermission[]
 
   @@map("roles")

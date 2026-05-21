@@ -19,7 +19,7 @@ async function getDashboardData() {
     pendingOrders,
   ] = await Promise.all([
     prisma.order.count(),
-    prisma.user.count({ where: { role: 'CUSTOMER' } }),
+    prisma.user.count({ where: { roleRef: { name: 'CUSTOMER' } } }),
     prisma.product.count({ where: { status: 'ACTIVE' } }),
     prisma.order.aggregate({
       where: { status: { notIn: ['CANCELLED', 'REFUNDED'] } },

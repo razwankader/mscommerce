@@ -52,7 +52,8 @@ declare module 'next-auth' {
       name?: string | null
       email?: string | null
       image?: string | null
-      role: string
+      role: string        // role name, e.g. "ADMIN"
+      roleId: string      // FK to roles.id
       permissions: string[]
     }
   }

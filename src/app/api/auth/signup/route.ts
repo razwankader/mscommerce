@@ -22,8 +22,11 @@ export async function POST(req: NextRequest) {
 
   const hashed = await bcrypt.hash(password, 12)
 
+  const customerRole = await prisma.role.findUnique({ where: { name: 'CUSTOMER' } })
+  if (!customerRole) return NextResponse.json({ error: 'System not configured' }, { status: 500 })
+
   await prisma.user.create({
-    data: { name, email, password: hashed, phone: phone || null, role: 'CUSTOMER' },
+    data: { name, email, password: hashed, phone: phone || null, roleId: customerRole.id },
   })
 
   await prisma.emailOtp.deleteMany({ where: { email } })

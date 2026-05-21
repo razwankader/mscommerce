@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '10')
   const search = searchParams.get('search') || ''
-  const role = searchParams.get('role') || ''
+  const roleName = searchParams.get('role') || ''
 
   const where: any = {}
   if (search) {
@@ -22,12 +22,22 @@ export async function GET(req: NextRequest) {
       { email: { contains: search, mode: 'insensitive' } },
     ]
   }
-  if (role) where.role = role
+  if (roleName) where.roleRef = { name: roleName }
 
   const [data, total] = await Promise.all([
     prisma.user.findMany({
       where,
-      select: { id: true, name: true, email: true, role: true, phone: true, isActive: true, createdAt: true, _count: { select: { orders: true } } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roleId: true,
+        roleRef: { select: { name: true, label: true } },
+        phone: true,
+        isActive: true,
+        createdAt: true,
+        _count: { select: { orders: true } },
+      },
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -44,18 +54,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { name, email, password, role, phone } = await req.json()
-  if (!name || !email || !password) {
-    return NextResponse.json({ error: 'Name, email and password required' }, { status: 400 })
+  const { name, email, password, roleId, phone } = await req.json()
+  if (!name || !email || !password || !roleId) {
+    return NextResponse.json({ error: 'Name, email, password, and role are required' }, { status: 400 })
   }
+
+  const roleRecord = await prisma.role.findUnique({ where: { id: roleId } })
+  if (!roleRecord) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 409 })
 
   const hashed = await bcrypt.hash(password, 12)
   const user = await prisma.user.create({
-    data: { name, email, password: hashed, role: role || 'CUSTOMER', phone },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    data: { name, email, password: hashed, roleId, phone },
+    select: {
+      id: true, name: true, email: true,
+      roleId: true, roleRef: { select: { name: true, label: true } },
+      createdAt: true,
+    },
   })
 
   return NextResponse.json(user, { status: 201 })

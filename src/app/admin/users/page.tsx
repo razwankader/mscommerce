@@ -5,12 +5,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, UserX, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { DataTable } from '@/components/admin/data-table'
 import { formatDate } from '@/lib/utils'
 
-const roleVariant: Record<string, any> = {
+interface RoleOption { id: string; name: string; label: string }
+
+const systemRoleBadge: Record<string, any> = {
   ADMIN: 'danger',
   MANAGER: 'info',
   CUSTOMER: 'default',
@@ -23,20 +24,33 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'CUSTOMER', phone: '', isActive: true })
+  const [form, setForm] = useState({ name: '', email: '', password: '', roleId: '', phone: '', isActive: true })
   const [loading, setLoading] = useState(false)
+
+  // Fetch roles for dropdowns
+  const { data: rolesData = [] } = useQuery<RoleOption[]>({
+    queryKey: ['admin-roles-list'],
+    queryFn: () => fetch('/api/admin/roles').then(r => r.json()),
+  })
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', page, search, roleFilter],
     queryFn: () => {
       const qs = new URLSearchParams({ page: String(page), limit: '10', search, role: roleFilter })
-      return fetch(`/api/users?${qs}`).then((r) => r.json())
+      return fetch(`/api/users?${qs}`).then(r => r.json())
     },
   })
 
   function openModal(user?: any) {
     setEditing(user || null)
-    setForm({ name: user?.name || '', email: user?.email || '', password: '', role: user?.role || 'CUSTOMER', phone: user?.phone || '', isActive: user?.isActive ?? true })
+    setForm({
+      name: user?.name || '',
+      email: user?.email || '',
+      password: '',
+      roleId: user?.roleId || '',
+      phone: user?.phone || '',
+      isActive: user?.isActive ?? true,
+    })
     setModalOpen(true)
   }
 
@@ -46,8 +60,8 @@ export default function UsersPage() {
     try {
       const url = editing ? `/api/users/${editing.id}` : '/api/users'
       const method = editing ? 'PUT' : 'POST'
-      const body = { ...form }
-      if (editing && !body.password) delete (body as any).password
+      const body: any = { ...form }
+      if (editing && !body.password) delete body.password
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) {
         const err = await res.json()
@@ -80,7 +94,15 @@ export default function UsersPage() {
       ),
     },
     { key: 'phone', label: 'Phone', render: (v: string) => v || <span className="text-gray-400">—</span> },
-    { key: 'role', label: 'Role', render: (v: string) => <Badge variant={roleVariant[v]}>{v}</Badge> },
+    {
+      key: 'roleRef',
+      label: 'Role',
+      render: (roleRef: { name: string; label: string } | null) => (
+        <Badge variant={systemRoleBadge[roleRef?.name ?? ''] ?? 'default'}>
+          {roleRef?.label ?? roleRef?.name ?? '—'}
+        </Badge>
+      ),
+    },
     { key: '_count', label: 'Orders', render: (v: any) => v?.orders || 0 },
     { key: 'isActive', label: 'Status', render: (v: boolean) => <Badge variant={v ? 'success' : 'danger'}>{v ? 'Active' : 'Inactive'}</Badge> },
     { key: 'createdAt', label: 'Joined', render: (v: string) => <span className="text-xs text-gray-500">{formatDate(v)}</span> },
@@ -117,15 +139,16 @@ export default function UsersPage() {
             className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-brand focus:outline-none"
           />
         </div>
+        {/* Filter by role name */}
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none bg-white"
         >
           <option value="">All Roles</option>
-          <option value="ADMIN">Admin</option>
-          <option value="MANAGER">Manager</option>
-          <option value="CUSTOMER">Customer</option>
+          {rolesData.map(r => (
+            <option key={r.id} value={r.name}>{r.label}</option>
+          ))}
         </select>
       </div>
 
@@ -150,15 +173,36 @@ export default function UsersPage() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <Input label="Full Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               <Input label="Email *" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              <Input label={editing ? 'New Password (leave blank to keep)' : 'Password *'} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editing} />
+              <Input
+                label={editing ? 'New Password (leave blank to keep)' : 'Password *'}
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required={!editing}
+              />
               <Input label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              <Select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                <option value="CUSTOMER">Customer</option>
-                <option value="MANAGER">Manager</option>
-                <option value="ADMIN">Admin</option>
-              </Select>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                <select
+                  value={form.roleId}
+                  onChange={(e) => setForm({ ...form, roleId: e.target.value })}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none bg-white"
+                >
+                  <option value="">Select a role…</option>
+                  {rolesData.map(r => (
+                    <option key={r.id} value={r.id}>{r.label} ({r.name})</option>
+                  ))}
+                </select>
+              </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="isActive" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="rounded border-gray-300 text-brand" />
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  className="rounded border-gray-300 text-brand"
+                />
                 <label htmlFor="isActive" className="text-sm font-medium text-gray-700">Active account</label>
               </div>
               <div className="flex justify-end gap-3 pt-2">
