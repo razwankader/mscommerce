@@ -3,25 +3,69 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+const PERMISSION_DEFINITIONS = [
+  { key: 'dashboard.view',    label: 'View Dashboard',             group: 'General'        },
+  { key: 'products.manage',   label: 'Manage Products',            group: 'Catalog'        },
+  { key: 'categories.manage', label: 'Manage Categories',          group: 'Catalog'        },
+  { key: 'brands.manage',     label: 'Manage Brands',              group: 'Catalog'        },
+  { key: 'orders.manage',     label: 'Manage Orders',              group: 'Orders & Stock' },
+  { key: 'stock.manage',      label: 'Manage Stock',               group: 'Orders & Stock' },
+  { key: 'banners.manage',    label: 'Manage Banners',             group: 'Content'        },
+  { key: 'pages.manage',      label: 'Manage Pages',               group: 'Content'        },
+  { key: 'users.manage',      label: 'Manage Users',               group: 'Administration' },
+  { key: 'roles.manage',      label: 'Manage Roles & Permissions', group: 'Administration' },
+  { key: 'settings.manage',   label: 'Manage Settings',            group: 'Administration' },
+]
+
+const MANAGER_PERMISSION_KEYS = [
+  'dashboard.view', 'products.manage', 'categories.manage', 'brands.manage',
+  'orders.manage', 'stock.manage', 'banners.manage', 'pages.manage',
+]
+
 async function main() {
   console.log('Seeding database...')
 
-  // Ensure ADMIN role exists (seed RBAC first if needed)
-  let adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
-  if (!adminRole) {
-    console.log('Seeding roles first...')
-    await prisma.role.createMany({
-      data: [
-        { name: 'ADMIN',    label: 'Administrator', description: 'Full access', isSystem: true },
-        { name: 'MANAGER',  label: 'Manager',       description: 'Catalog, orders, content', isSystem: true },
-        { name: 'CUSTOMER', label: 'Customer',      description: 'Regular customer', isSystem: true },
-      ],
+  // ── Permissions ──────────────────────────────────────────────────────────
+  await prisma.permission.createMany({
+    data: PERMISSION_DEFINITIONS,
+    skipDuplicates: true,
+  })
+  console.log('Permissions seeded')
+
+  // ── System roles ─────────────────────────────────────────────────────────
+  await prisma.role.createMany({
+    data: [
+      { name: 'ADMIN',    label: 'Administrator', description: 'Full access to all features',        isSystem: true },
+      { name: 'MANAGER',  label: 'Manager',       description: 'Catalog, orders, and content',       isSystem: true },
+      { name: 'CUSTOMER', label: 'Customer',      description: 'Regular customer, no admin access',  isSystem: true },
+    ],
+    skipDuplicates: true,
+  })
+
+  const allPerms    = await prisma.permission.findMany()
+  const adminRole   = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
+  const managerRole = await prisma.role.findUnique({ where: { name: 'MANAGER' } })
+
+  // ADMIN → all permissions
+  if (adminRole) {
+    await prisma.rolePermission.createMany({
+      data: allPerms.map(p => ({ roleId: adminRole.id, permissionId: p.id })),
       skipDuplicates: true,
     })
-    adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
   }
 
-  // Admin user
+  // MANAGER → subset
+  if (managerRole) {
+    const managerPerms = allPerms.filter(p => MANAGER_PERMISSION_KEYS.includes(p.key))
+    await prisma.rolePermission.createMany({
+      data: managerPerms.map(p => ({ roleId: managerRole.id, permissionId: p.id })),
+      skipDuplicates: true,
+    })
+  }
+
+  console.log('Roles & permissions seeded')
+
+  // ── Admin user ───────────────────────────────────────────────────────────
   const adminPassword = await bcrypt.hash('admin123', 12)
   const admin = await prisma.user.upsert({
     where: { email: 'admin@matinsanitary.com' },
