@@ -17,10 +17,16 @@ export async function middleware(req: NextRequest) {
     if (!token) return NextResponse.redirect(new URL('/login', req.url))
     // Regular customer → home
     if (token.role === 'CUSTOMER') return NextResponse.redirect(new URL('/', req.url))
-    // Check permission-based access
+    // ADMIN bypasses permission check — prevents redirect loop when
+    // token.permissions is empty (stale JWT or unseeded prod DB)
+    if (token.role === 'ADMIN') return NextResponse.next()
+    // Permission check for MANAGER and custom roles
     const permissions = (token.permissions as string[]) ?? []
     if (!canAccessRoute(permissions, pathname)) {
-      return NextResponse.redirect(new URL('/admin?denied=1', req.url))
+      // Redirect to dashboard if user can see it, otherwise home
+      // (avoids infinite loop if /admin itself is not accessible)
+      const canSeeDashboard = permissions.includes('dashboard.view')
+      return NextResponse.redirect(new URL(canSeeDashboard ? '/admin?denied=1' : '/', req.url))
     }
   }
 
