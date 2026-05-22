@@ -60,8 +60,23 @@ function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
     let timer: ReturnType<typeof setTimeout>
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT') return
-      if (e.key === 'Enter') { if (buffer.length > 2) lookup(buffer); buffer = ''; clearTimeout(timer); return }
-      if (e.key.length === 1) { buffer += e.key; clearTimeout(timer); timer = setTimeout(() => { buffer = '' }, 100) }
+      if (e.key === 'Enter') {
+        if (buffer.length > 2) {
+          e.preventDefault()   // prevent focused button (e.g. +/-) from firing
+          e.stopPropagation()
+          lookup(buffer)
+        }
+        buffer = ''
+        clearTimeout(timer)
+        return
+      }
+      if (e.key.length === 1) {
+        // Once buffer has chars we know it's scanner input — block side effects
+        if (buffer.length > 0) e.preventDefault()
+        buffer += e.key
+        clearTimeout(timer)
+        timer = setTimeout(() => { buffer = '' }, 100)
+      }
     }
     window.addEventListener('keydown', handler)
     return () => { window.removeEventListener('keydown', handler); clearTimeout(timer) }
