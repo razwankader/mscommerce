@@ -146,10 +146,10 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const SidebarContent = () => (
     <aside className="flex flex-col h-full">
       <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
-        <div>
+        <Link href="/" className="block group">
           <Logo size="sm" />
-          <p className="text-xs text-gray-400 mt-1.5 pl-0.5">Admin Panel</p>
-        </div>
+          <p className="text-xs text-gray-400 mt-1.5 pl-0.5 group-hover:text-brand transition-colors">Admin Panel</p>
+        </Link>
         {onClose && (
           <button onClick={onClose} className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
             <X size={18} />

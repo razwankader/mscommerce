@@ -2,8 +2,9 @@
 
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
-import { Bell, LogOut, User, Menu } from 'lucide-react'
+import { Bell, LogOut, User, Menu, Home } from 'lucide-react'
 import { useState } from 'react'
+import Link from 'next/link'
 
 interface AdminHeaderProps {
   onMenuClick?: () => void
@@ -54,6 +55,15 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             <>
               <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
               <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-gray-200 bg-white shadow-lg py-1 z-20">
+                <Link
+                  href="/"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Home size={14} />
+                  Home Page
+                </Link>
+                <div className="border-t border-gray-100 my-1" />
                 <button
                   onClick={() => signOut({ callbackUrl: '/account/login' })}
                   className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
