@@ -3,10 +3,152 @@
 import { useCart } from '@/context/cart-context'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Loader2, ScanBarcode, Camera, Keyboard, AlertCircle, ChevronDown } from 'lucide-react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useZxing } from 'react-zxing'
+
+type ScanMode = 'camera' | 'manual'
+
+function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
+  const { addItem } = useCart()
+  const [open, setOpen] = useState(false)
+  const [scanMode, setScanMode] = useState<ScanMode>('camera')
+  const [manualCode, setManualCode] = useState('')
+  const [looking, setLooking] = useState(false)
+  const [error, setError] = useState('')
+  const [scanPaused, setScanPaused] = useState(false)
+  const lastScanned = useRef('')
+
+  const lookup = useCallback(async (code: string) => {
+    const trimmed = code.trim()
+    if (!trimmed || trimmed === lastScanned.current) return
+    lastScanned.current = trimmed
+    setLooking(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/products/lookup?code=${encodeURIComponent(trimmed)}`)
+      if (!res.ok) {
+        const err = await res.json()
+        setError(err.error || 'Product not found')
+        setScanPaused(false)
+        return
+      }
+      const p = await res.json()
+      addItem({ id: p.id, slug: p.slug, name: p.name, price: p.price, salePrice: p.salePrice, image: p.images?.[0] ?? null })
+      onAdd(p.name)
+      lastScanned.current = ''
+      setScanPaused(false)
+    } finally {
+      setLooking(false)
+    }
+  }, [addItem, onAdd])
+
+  const { ref: videoRef } = useZxing({
+    paused: !open || scanMode !== 'camera' || scanPaused,
+    onResult(result) {
+      const text = result.getText()
+      if (text) { setScanPaused(true); lookup(text) }
+    },
+  })
+
+  // USB/Bluetooth scanner
+  useEffect(() => {
+    if (!open || scanMode !== 'manual') return
+    let buffer = ''
+    let timer: ReturnType<typeof setTimeout>
+    const handler = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).tagName === 'INPUT') return
+      if (e.key === 'Enter') { if (buffer.length > 2) lookup(buffer); buffer = ''; clearTimeout(timer); return }
+      if (e.key.length === 1) { buffer += e.key; clearTimeout(timer); timer = setTimeout(() => { buffer = '' }, 100) }
+    }
+    window.addEventListener('keydown', handler)
+    return () => { window.removeEventListener('keydown', handler); clearTimeout(timer) }
+  }, [open, scanMode, lookup])
+
+  return (
+    <div className="mb-6 border border-brand/30 rounded-xl overflow-hidden bg-orange-50/40">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-brand hover:bg-orange-50 transition-colors"
+      >
+        <span className="flex items-center gap-2"><ScanBarcode size={16} /> Scan Barcode to Add Product</span>
+        <ChevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-brand/10">
+          {/* Mode toggle */}
+          <div className="grid grid-cols-2 gap-2 pt-3">
+            <button
+              onClick={() => { setScanMode('camera'); lastScanned.current = '' }}
+              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium border transition-colors ${scanMode === 'camera' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
+            >
+              <Camera size={14} /> Camera
+            </button>
+            <button
+              onClick={() => { setScanMode('manual'); lastScanned.current = '' }}
+              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium border transition-colors ${scanMode === 'manual' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
+            >
+              <Keyboard size={14} /> Manual / USB
+            </button>
+          </div>
+
+          {/* Camera view */}
+          {scanMode === 'camera' && (
+            <div className="relative rounded-xl overflow-hidden bg-gray-900 aspect-[16/7]">
+              <video ref={videoRef} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-48 h-24 border-2 border-brand rounded-lg relative">
+                  <div className="absolute inset-x-0 top-1/2 h-0.5 bg-brand/60 animate-pulse" />
+                </div>
+              </div>
+              {looking && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <Loader2 size={24} className="animate-spin text-white" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual input */}
+          {scanMode === 'manual' && (
+            <form
+              onSubmit={(e) => { e.preventDefault(); lookup(manualCode); setManualCode('') }}
+              className="flex gap-2"
+            >
+              <input
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                placeholder="Barcode or SKU"
+                autoFocus
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+              <button
+                type="submit"
+                disabled={looking}
+                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {looking ? <Loader2 size={14} className="animate-spin" /> : null}
+                Add
+              </button>
+            </form>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <AlertCircle size={14} className="text-red-500 shrink-0" />
+              <p className="text-xs text-red-700 flex-1">{error}</p>
+              <button onClick={() => { setError(''); lastScanned.current = '' }} className="text-xs text-red-400 hover:text-red-600 underline">Retry</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function formatPrice(n: number) {
   return '৳' + n.toLocaleString('en-BD')
@@ -19,9 +161,16 @@ interface ShippingConfig {
 
 export default function CartPage() {
   const { items, count, total, removeItem, updateQty, clearCart } = useCart()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [shipping, setShipping] = useState<ShippingConfig | null>(null)
+  const [addedToast, setAddedToast] = useState<string | null>(null)
+  const isStaff = (session?.user?.permissions?.length ?? 0) > 0
+
+  function handleScannedAdd(name: string) {
+    setAddedToast(name)
+    setTimeout(() => setAddedToast(null), 2500)
+  }
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -52,17 +201,26 @@ export default function CartPage() {
 
   if (count === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
-        <ShoppingBag size={64} className="mx-auto text-gray-300 mb-6" />
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
-        <p className="text-gray-500 mb-8">Add some products to get started.</p>
-        <Link
-          href="/products"
-          className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-xl hover:bg-brand-dark transition-colors"
-        >
-          <ArrowLeft size={16} />
-          Browse Products
-        </Link>
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        {isStaff && <ScannerPanel onAdd={handleScannedAdd} />}
+        {addedToast && (
+          <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
+            <ScanBarcode size={16} className="text-green-500 shrink-0" />
+            Added to cart: {addedToast}
+          </div>
+        )}
+        <div className="text-center py-16">
+          <ShoppingBag size={64} className="mx-auto text-gray-300 mb-6" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
+          <p className="text-gray-500 mb-8">Add some products to get started.</p>
+          <Link
+            href="/products"
+            className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-xl hover:bg-brand-dark transition-colors"
+          >
+            <ArrowLeft size={16} />
+            Browse Products
+          </Link>
+        </div>
       </div>
     )
   }
@@ -78,6 +236,17 @@ export default function CartPage() {
           Clear all
         </button>
       </div>
+
+      {/* Staff-only barcode scanner */}
+      {isStaff && <ScannerPanel onAdd={handleScannedAdd} />}
+
+      {/* Added toast */}
+      {addedToast && (
+        <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
+          <ScanBarcode size={16} className="text-green-500 shrink-0" />
+          Added to cart: {addedToast}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Items */}
