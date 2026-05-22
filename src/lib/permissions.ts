@@ -41,7 +41,7 @@ export function hasPermission(permissions: string[], key: PermissionKey): boolea
 }
 
 export function canAccessRoute(permissions: string[], pathname: string): boolean {
-  if (pathname === '/admin') return permissions.includes('dashboard.view')
+  if (pathname === '/admin') return permissions.length > 0
   const match = ROUTE_PERMISSION_MAP.find(r => pathname.startsWith(r.prefix))
   if (!match) return true // unknown route → allow
   return permissions.includes(match.permission)
