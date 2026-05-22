@@ -3,7 +3,7 @@
 import { useCart } from '@/context/cart-context'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Loader2, ScanBarcode, Camera, Keyboard, AlertCircle, ChevronDown } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Loader2, ScanBarcode, Camera, Keyboard, AlertCircle, ChevronDown, Tag, X } from 'lucide-react'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -165,6 +165,79 @@ function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
   )
 }
 
+function PriceOverride({
+  itemId, originalPrice, customPrice, onSet,
+}: {
+  itemId: string
+  originalPrice: number
+  customPrice: number | null
+  onSet: (id: string, price: number | null) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [input, setInput] = useState('')
+  const [err, setErr] = useState('')
+
+  function open() {
+    setInput(customPrice !== null ? String(customPrice) : '')
+    setErr('')
+    setEditing(true)
+  }
+
+  function apply() {
+    const val = parseFloat(input)
+    if (isNaN(val) || val <= 0) { setErr('Enter a valid price'); return }
+    if (val > originalPrice) { setErr(`Must be ≤ ${formatPrice(originalPrice)}`); return }
+    onSet(itemId, val)
+    setEditing(false)
+  }
+
+  function clear() {
+    onSet(itemId, null)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-2 flex items-center gap-1.5">
+        <div className="relative">
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">৳</span>
+          <input
+            autoFocus
+            type="number"
+            min={1}
+            max={originalPrice}
+            value={input}
+            onChange={(e) => { setInput(e.target.value); setErr('') }}
+            onKeyDown={(e) => { if (e.key === 'Enter') apply(); if (e.key === 'Escape') setEditing(false) }}
+            className="w-28 pl-5 pr-2 py-1 text-xs border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-400"
+            placeholder={String(originalPrice)}
+          />
+        </div>
+        <button onClick={apply} className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg hover:bg-amber-600 font-medium">Apply</button>
+        <button onClick={() => setEditing(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={13} /></button>
+        {customPrice !== null && (
+          <button onClick={clear} className="text-xs text-red-400 hover:text-red-600 underline">Reset</button>
+        )}
+        {err && <span className="text-xs text-red-500">{err}</span>}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={open}
+      className={`mt-1.5 flex items-center gap-1 text-xs transition-colors ${
+        customPrice !== null
+          ? 'text-amber-600 hover:text-amber-700'
+          : 'text-gray-400 hover:text-amber-600'
+      }`}
+    >
+      <Tag size={11} />
+      {customPrice !== null ? 'Edit price override' : 'Override price'}
+    </button>
+  )
+}
+
 function formatPrice(n: number) {
   return '৳' + n.toLocaleString('en-BD')
 }
@@ -175,7 +248,7 @@ interface ShippingConfig {
 }
 
 export default function CartPage() {
-  const { items, count, total, removeItem, updateQty, clearCart } = useCart()
+  const { items, count, total, removeItem, updateQty, setCustomPrice, clearCart } = useCart()
   const { data: session, status } = useSession()
   const router = useRouter()
   const [shipping, setShipping] = useState<ShippingConfig | null>(null)
@@ -267,7 +340,8 @@ export default function CartPage() {
         {/* Items */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => {
-            const unitPrice = item.salePrice ?? item.price
+            const originalPrice = item.salePrice ?? item.price
+            const unitPrice = item.customPrice ?? originalPrice
             return (
               <div key={item.id} className="flex gap-4 bg-white rounded-xl border border-gray-200 p-4">
                 <Link href={`/products/${item.slug}`} className="shrink-0">
@@ -285,12 +359,27 @@ export default function CartPage() {
                       {item.name}
                     </p>
                   </Link>
-                  <div className="mt-1 flex items-baseline gap-2">
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-brand">{formatPrice(unitPrice)}</span>
-                    {item.salePrice && (
+                    {item.customPrice !== null && (
+                      <>
+                        <span className="text-xs text-gray-400 line-through">{formatPrice(originalPrice)}</span>
+                        <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-1.5 py-0.5 rounded-full">Custom</span>
+                      </>
+                    )}
+                    {item.customPrice === null && item.salePrice && (
                       <span className="text-xs text-gray-400 line-through">{formatPrice(item.price)}</span>
                     )}
                   </div>
+                  {/* Staff price override */}
+                  {isStaff && (
+                    <PriceOverride
+                      itemId={item.id}
+                      originalPrice={originalPrice}
+                      customPrice={item.customPrice}
+                      onSet={setCustomPrice}
+                    />
+                  )}
                   <div className="mt-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <button

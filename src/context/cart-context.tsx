@@ -8,6 +8,7 @@ export interface CartItem {
   name: string
   price: number
   salePrice: number | null
+  customPrice: number | null   // staff price override (must be ≤ original effective price)
   image: string | null
   quantity: number
 }
@@ -16,9 +17,10 @@ interface CartContextValue {
   items: CartItem[]
   count: number
   total: number
-  addItem: (item: Omit<CartItem, 'quantity'>) => void
+  addItem: (item: Omit<CartItem, 'quantity' | 'customPrice'>) => void
   removeItem: (id: string) => void
   updateQty: (id: string, qty: number) => void
+  setCustomPrice: (id: string, price: number | null) => void
   clearCart: () => void
 }
 
@@ -43,13 +45,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
   }, [items, hydrated])
 
-  const addItem = useCallback((item: Omit<CartItem, 'quantity'>) => {
+  const addItem = useCallback((item: Omit<CartItem, 'quantity' | 'customPrice'>) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id)
       if (existing) {
         return prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)
       }
-      return [...prev, { ...item, quantity: 1 }]
+      return [...prev, { ...item, quantity: 1, customPrice: null }]
     })
   }, [])
 
@@ -62,13 +64,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity: qty } : i))
   }, [])
 
+  const setCustomPrice = useCallback((id: string, price: number | null) => {
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, customPrice: price } : i))
+  }, [])
+
   const clearCart = useCallback(() => setItems([]), [])
 
   const count = items.reduce((s, i) => s + i.quantity, 0)
-  const total = items.reduce((s, i) => s + (i.salePrice ?? i.price) * i.quantity, 0)
+  const total = items.reduce((s, i) => s + (i.customPrice ?? i.salePrice ?? i.price) * i.quantity, 0)
 
   return (
-    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQty, clearCart }}>
+    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQty, setCustomPrice, clearCart }}>
       {children}
     </CartContext.Provider>
   )
