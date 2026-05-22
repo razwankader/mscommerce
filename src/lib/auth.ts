@@ -13,8 +13,21 @@ const userWithRole = {
   },
 } as const
 
+// Extend PrismaAdapter to assign CUSTOMER role on OAuth user creation
+// (PrismaAdapter doesn't know about our required roleId FK)
+function buildAdapter() {
+  const base = PrismaAdapter(prisma)
+  return {
+    ...base,
+    async createUser(data: Parameters<NonNullable<typeof base.createUser>>[0]) {
+      const customerRole = await prisma.role.findUnique({ where: { name: 'CUSTOMER' } })
+      return base.createUser!({ ...data, roleId: customerRole?.id } as any)
+    },
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: buildAdapter(),
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: { strategy: 'jwt' },
   trustHost: true,
