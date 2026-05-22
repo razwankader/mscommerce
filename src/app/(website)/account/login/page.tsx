@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn, getSession } from 'next-auth/react'
+import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
@@ -28,13 +28,7 @@ function LoginForm() {
       setError('Invalid email or password')
       setLoading(false)
     } else {
-      const session = await getSession()
-      const permissions = (session?.user as any)?.permissions as string[] | undefined
-      if (permissions && permissions.length > 0) {
-        router.push('/admin')
-      } else {
-        router.push(callbackUrl)
-      }
+      router.push(callbackUrl)
       router.refresh()
     }
   }

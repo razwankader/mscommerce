@@ -31,12 +31,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isLoginPage && token) {
-    // ADMIN and dashboard.view users → dashboard; others → first permitted route
-    const permissions = (token.permissions as string[]) ?? []
-    const hasDashboard = token.role === 'ADMIN' || permissions.includes('dashboard.view')
-    if (hasDashboard) return NextResponse.redirect(new URL('/admin', req.url))
-    const firstAllowed = ROUTE_PERMISSION_MAP.find(r => permissions.includes(r.permission))
-    return NextResponse.redirect(new URL(firstAllowed ? firstAllowed.prefix : '/', req.url))
+    return NextResponse.redirect(new URL('/', req.url))
   }
 }
 
