@@ -29,8 +29,8 @@ function LoginForm() {
       setLoading(false)
     } else {
       const session = await getSession()
-      const role = (session?.user as any)?.role
-      if (role === 'ADMIN' || role === 'MANAGER') {
+      const permissions = (session?.user as any)?.permissions as string[] | undefined
+      if (permissions && permissions.length > 0) {
         router.push('/admin')
       } else {
         router.push(callbackUrl)
