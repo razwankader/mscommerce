@@ -66,6 +66,7 @@ interface OrderEmailData {
   email: string
   items: OrderItem[]
   subtotal: number
+  discount?: number
   shipping: number
   total: number
   address: string

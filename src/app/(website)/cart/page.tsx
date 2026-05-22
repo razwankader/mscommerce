@@ -165,6 +165,67 @@ function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
   )
 }
 
+function DiscountInput({
+  subtotal, discount, onSet,
+}: {
+  subtotal: number
+  discount: number
+  onSet: (amount: number) => void
+}) {
+  const [mode, setMode] = useState<'amount' | 'percent'>('amount')
+  const [input, setInput] = useState(discount > 0 ? String(discount) : '')
+  const [err, setErr] = useState('')
+
+  function apply() {
+    const val = parseFloat(input)
+    if (isNaN(val) || val < 0) { setErr('Enter a valid number'); return }
+    const amount = mode === 'percent' ? (subtotal * val) / 100 : val
+    if (amount > subtotal) { setErr('Discount exceeds subtotal'); return }
+    onSet(Math.round(amount * 100) / 100)
+    setErr('')
+  }
+
+  function clear() { onSet(0); setInput('') }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs shrink-0">
+          <button
+            onClick={() => setMode('amount')}
+            className={`px-2 py-1 font-medium transition-colors ${mode === 'amount' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+          >৳</button>
+          <button
+            onClick={() => setMode('percent')}
+            className={`px-2 py-1 font-medium transition-colors ${mode === 'percent' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+          >%</button>
+        </div>
+        <input
+          type="number"
+          min={0}
+          max={mode === 'percent' ? 100 : subtotal}
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setErr('') }}
+          onKeyDown={(e) => { if (e.key === 'Enter') apply() }}
+          placeholder={mode === 'percent' ? 'e.g. 10' : 'Discount amount'}
+          className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:border-brand"
+        />
+        <button onClick={apply} className="px-2 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-medium shrink-0">Apply</button>
+        {discount > 0 && (
+          <button onClick={clear} className="p-1 text-gray-400 hover:text-red-500 shrink-0"><X size={13} /></button>
+        )}
+      </div>
+      {discount > 0 && (
+        <div className="flex justify-between text-green-600 font-medium text-xs">
+          <span>Discount applied</span>
+          <span>−{formatPrice(discount)}</span>
+        </div>
+      )}
+      {err && <p className="text-xs text-red-500">{err}</p>}
+    </div>
+  )
+}
+
 function PriceOverride({
   itemId, originalPrice, customPrice, onSet,
 }: {
@@ -248,7 +309,7 @@ interface ShippingConfig {
 }
 
 export default function CartPage() {
-  const { items, count, total, removeItem, updateQty, setCustomPrice, clearCart } = useCart()
+  const { items, count, subtotal, discount, total, removeItem, updateQty, setCustomPrice, setDiscount, clearCart } = useCart()
   const { data: session, status } = useSession()
   const router = useRouter()
   const [shipping, setShipping] = useState<ShippingConfig | null>(null)
@@ -282,10 +343,10 @@ export default function CartPage() {
   if (status === 'unauthenticated') return null
 
   const deliveryFee = shipping
-    ? (shipping.threshold !== null && total >= shipping.threshold ? 0 : shipping.cost)
+    ? (shipping.threshold !== null && subtotal >= shipping.threshold ? 0 : shipping.cost)
     : null
 
-  const grandTotal = deliveryFee !== null ? total + deliveryFee : null
+  const grandTotal = deliveryFee !== null ? total + deliveryFee : null  // total already has discount applied
 
   if (count === 0) {
     return (
@@ -422,8 +483,24 @@ export default function CartPage() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({count} items)</span>
-                <span>{formatPrice(total)}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
+
+              {/* Staff discount */}
+              {isStaff && (
+                <DiscountInput
+                  subtotal={subtotal}
+                  discount={discount}
+                  onSet={setDiscount}
+                />
+              )}
+              {!isStaff && discount > 0 && (
+                <div className="flex justify-between text-green-600 font-medium">
+                  <span>Discount</span>
+                  <span>−{formatPrice(discount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-gray-600">
                 <span>Delivery</span>
                 <span className={deliveryFee === 0 ? 'text-green-600 font-medium' : ''}>
@@ -434,9 +511,9 @@ export default function CartPage() {
                     : formatPrice(deliveryFee)}
                 </span>
               </div>
-              {shipping && shipping.threshold !== null && total < shipping.threshold && (
+              {shipping && shipping.threshold !== null && subtotal < shipping.threshold && (
                 <p className="text-xs text-gray-400">
-                  Add {formatPrice(shipping.threshold - total)} more for free delivery
+                  Add {formatPrice(shipping.threshold - subtotal)} more for free delivery
                 </p>
               )}
             </div>

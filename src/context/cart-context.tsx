@@ -16,11 +16,14 @@ export interface CartItem {
 interface CartContextValue {
   items: CartItem[]
   count: number
+  subtotal: number
+  discount: number
   total: number
   addItem: (item: Omit<CartItem, 'quantity' | 'customPrice'>) => void
   removeItem: (id: string) => void
   updateQty: (id: string, qty: number) => void
   setCustomPrice: (id: string, price: number | null) => void
+  setDiscount: (amount: number) => void
   clearCart: () => void
 }
 
@@ -30,6 +33,7 @@ const STORAGE_KEY = 'matin_cart'
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [discount, setDiscountState] = useState(0)
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
@@ -68,13 +72,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, customPrice: price } : i))
   }, [])
 
-  const clearCart = useCallback(() => setItems([]), [])
+  const clearCart = useCallback(() => { setItems([]); setDiscountState(0) }, [])
+  const setDiscount = useCallback((amount: number) => {
+    setDiscountState(Math.max(0, amount))
+  }, [])
 
   const count = items.reduce((s, i) => s + i.quantity, 0)
-  const total = items.reduce((s, i) => s + (i.customPrice ?? i.salePrice ?? i.price) * i.quantity, 0)
+  const subtotal = items.reduce((s, i) => s + (i.customPrice ?? i.salePrice ?? i.price) * i.quantity, 0)
+  const total = Math.max(0, subtotal - discount)
 
   return (
-    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQty, setCustomPrice, clearCart }}>
+    <CartContext.Provider value={{ items, count, subtotal, discount, total, addItem, removeItem, updateQty, setCustomPrice, setDiscount, clearCart }}>
       {children}
     </CartContext.Provider>
   )

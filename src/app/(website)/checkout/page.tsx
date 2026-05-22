@@ -41,7 +41,7 @@ const INITIAL: FormData = {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, count, total, clearCart } = useCart()
+  const { items, count, subtotal, discount, total, clearCart } = useCart()
   const { data: session, status } = useSession()
   const [form, setForm] = useState<FormData>(INITIAL)
   const [errors, setErrors] = useState<Partial<FormData>>({})
@@ -77,7 +77,7 @@ export default function CheckoutPage() {
   }, [status, prefilled])
 
   const shipping = shippingConfig
-    ? (shippingConfig.threshold !== null && total >= shippingConfig.threshold ? 0 : shippingConfig.cost)
+    ? (shippingConfig.threshold !== null && subtotal >= shippingConfig.threshold ? 0 : shippingConfig.cost)
     : 0
   const grandTotal = total + shipping
 
@@ -114,7 +114,12 @@ export default function CheckoutPage() {
           city: form.city,
           state: form.state,
           notes: form.notes,
-          items: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
+          discount,
+          items: items.map((i) => ({
+            productId: i.id,
+            quantity: i.quantity,
+            customPrice: i.customPrice ?? undefined,
+          })),
         }),
       })
       if (!res.ok) throw new Error('Failed')
@@ -264,7 +269,7 @@ export default function CheckoutPage() {
               <h2 className="text-base font-bold text-gray-900 mb-4">Order Summary</h2>
               <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                 {items.map((item) => {
-                  const unitPrice = item.salePrice ?? item.price
+                  const unitPrice = item.customPrice ?? item.salePrice ?? item.price
                   return (
                     <div key={item.id} className="flex gap-3 items-start">
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
@@ -288,8 +293,14 @@ export default function CheckoutPage() {
               <div className="border-t border-gray-200 mt-4 pt-4 space-y-2 text-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>{formatPrice(total)}</span>
+                  <span>{formatPrice(subtotal)}</span>
                 </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600 font-medium">
+                    <span>Discount</span>
+                    <span>−{formatPrice(discount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery</span>
                   <span className={shipping === 0 ? 'text-green-600 font-medium' : ''}>

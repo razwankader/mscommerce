@@ -44,11 +44,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { items, firstName, lastName, email, phone, address, city, state, zipCode, notes } = body
+  const { items, firstName, lastName, email, phone, address, city, state, zipCode, notes, discount: rawDiscount } = body
 
   if (!items || items.length === 0) {
     return NextResponse.json({ error: 'No items in order' }, { status: 400 })
   }
+
+  const session = await auth()
+  const isStaff = (session?.user?.permissions?.length ?? 0) > 0
 
   const productIds = items.map((i: any) => i.productId)
   const products = await prisma.product.findMany({ where: { id: { in: productIds } } })
@@ -65,16 +68,24 @@ export async function POST(req: NextRequest) {
   let subtotal = 0
   const orderItems = items.map((item: any) => {
     const product = products.find((p) => p.id === item.productId)!
-    const price = Number(product.salePrice || product.price)
-    subtotal += price * item.quantity
-    return { productId: item.productId, quantity: item.quantity, price }
+    const basePrice = Number(product.salePrice ?? product.price)
+    // Allow staff to override price downward; ignore if not staff or price exceeds original
+    const customPrice = isStaff && item.customPrice != null && item.customPrice > 0 && item.customPrice <= basePrice
+      ? Number(item.customPrice)
+      : basePrice
+    subtotal += customPrice * item.quantity
+    return { productId: item.productId, quantity: item.quantity, price: customPrice }
   })
 
-  const shippingConfig = await getShippingConfig()
-  const shipping = calcShipping(subtotal, shippingConfig)
-  const total = subtotal + shipping
+  // Discount: staff only, must not exceed subtotal
+  const discount = isStaff && rawDiscount > 0
+    ? Math.min(Number(rawDiscount), subtotal)
+    : 0
 
-  const session = await auth()
+  const discountedSubtotal = subtotal - discount
+  const shippingConfig = await getShippingConfig()
+  const shipping = calcShipping(discountedSubtotal, shippingConfig)
+  const total = discountedSubtotal + shipping
 
   try {
     const order = await prisma.$transaction(async (tx) => {
@@ -99,6 +110,7 @@ export async function POST(req: NextRequest) {
           orderNumber: generateOrderNumber(),
           userId: session?.user?.id || null,
           subtotal,
+          discount,
           shipping,
           tax: 0,
           total,
@@ -144,6 +156,7 @@ export async function POST(req: NextRequest) {
           price: Number(oi.price),
         })),
         subtotal: Number(order.subtotal),
+        discount: Number(order.discount),
         shipping: Number(order.shipping),
         total: Number(order.total),
         address,
