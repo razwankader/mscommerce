@@ -13,8 +13,8 @@ type ScanMode = 'camera' | 'manual'
 
 function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
   const { addItem } = useCart()
-  const [open, setOpen] = useState(false)
-  const [scanMode, setScanMode] = useState<ScanMode>('camera')
+  const [open, setOpen] = useState(true)
+  const [scanMode, setScanMode] = useState<ScanMode>('manual')
   const [manualCode, setManualCode] = useState('')
   const [looking, setLooking] = useState(false)
   const [error, setError] = useState('')
@@ -82,16 +82,16 @@ function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
           {/* Mode toggle */}
           <div className="grid grid-cols-2 gap-2 pt-3">
             <button
-              onClick={() => { setScanMode('camera'); lastScanned.current = '' }}
-              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium border transition-colors ${scanMode === 'camera' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
-            >
-              <Camera size={14} /> Camera
-            </button>
-            <button
               onClick={() => { setScanMode('manual'); lastScanned.current = '' }}
               className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium border transition-colors ${scanMode === 'manual' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
             >
               <Keyboard size={14} /> Manual / USB
+            </button>
+            <button
+              onClick={() => { setScanMode('camera'); lastScanned.current = '' }}
+              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium border transition-colors ${scanMode === 'camera' ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600 hover:border-brand'}`}
+            >
+              <Camera size={14} /> Camera
             </button>
           </div>
 
@@ -167,10 +167,10 @@ export default function CartPage() {
   const [addedToast, setAddedToast] = useState<string | null>(null)
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
 
-  function handleScannedAdd(name: string) {
+  const handleScannedAdd = useCallback((name: string) => {
     setAddedToast(name)
     setTimeout(() => setAddedToast(null), 2500)
-  }
+  }, [])
 
   useEffect(() => {
     if (status === 'unauthenticated') {
