@@ -56,8 +56,10 @@ export default function CheckoutPage() {
       .catch(() => setShippingConfig({ threshold: null, cost: 150 }))
   }, [])
 
+  const isStaff = (session?.user?.permissions?.length ?? 0) > 0
+
   useEffect(() => {
-    if (status !== 'authenticated' || prefilled) return
+    if (status !== 'authenticated' || prefilled || isStaff) return
     fetch('/api/account/profile')
       .then(r => r.ok ? r.json() : null)
       .then(profile => {
@@ -161,7 +163,7 @@ export default function CheckoutPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-base font-bold text-gray-900">Delivery Information</h2>
-                {prefilled && (
+                {prefilled && !isStaff && (
                   <Link href="/account" className="text-xs text-brand hover:underline">
                     Edit profile
                   </Link>

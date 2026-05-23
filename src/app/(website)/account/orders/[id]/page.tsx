@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils'
-import { ArrowLeft, Loader2, MapPin, Phone, Mail } from 'lucide-react'
+import { ArrowLeft, Loader2, MapPin, Phone, Mail, FileText } from 'lucide-react'
 
 interface OrderDetail {
   id: string
@@ -83,9 +83,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             Placed on {new Date(order.createdAt).toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <span className={`ml-auto text-xs font-semibold px-2.5 py-1 rounded-full border ${STATUS_STYLES[order.status] || ''}`}>
-          {order.status}
-        </span>
+        <div className="ml-auto flex items-center gap-2">
+          <Link
+            href={`/invoice/${order.orderNumber}`}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand border border-brand px-2.5 py-1 rounded-full hover:bg-brand hover:text-white transition-colors"
+          >
+            <FileText size={12} />
+            Invoice
+          </Link>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${STATUS_STYLES[order.status] || ''}`}>
+            {order.status}
+          </span>
+        </div>
       </div>
 
       {/* Status tracker */}

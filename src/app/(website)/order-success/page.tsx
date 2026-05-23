@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle2, Package, Phone } from 'lucide-react'
+import { CheckCircle2, Package, Phone, FileText } from 'lucide-react'
 import { Suspense } from 'react'
 
 function OrderSuccessContent() {
@@ -51,6 +51,15 @@ function OrderSuccessContent() {
         >
           Continue Shopping
         </Link>
+        {orderNumber && (
+          <Link
+            href={`/invoice/${orderNumber}`}
+            className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-xl hover:border-brand hover:text-brand transition-colors"
+          >
+            <FileText size={16} />
+            View Invoice
+          </Link>
+        )}
         <Link
           href="/contact"
           className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-xl hover:border-brand hover:text-brand transition-colors"

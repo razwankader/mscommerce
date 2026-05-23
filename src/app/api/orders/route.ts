@@ -123,6 +123,7 @@ export async function POST(req: NextRequest) {
           state,
           zipCode,
           notes,
+          placedByStaff: isStaff,
           orderItems: { create: orderItems },
         },
         include: { orderItems: { include: { product: true } } },
@@ -161,6 +162,10 @@ export async function POST(req: NextRequest) {
         total: Number(order.total),
         address,
         city,
+        placedByStaff: isStaff,
+        // For customer orders, billing = session user (may differ from delivery recipient)
+        billingName: isStaff ? null : (session?.user?.name ?? null),
+        billingEmail: isStaff ? null : (session?.user?.email ?? null),
       }).catch(err => console.error('[order-confirm-email]', err))
     }
 

@@ -71,6 +71,10 @@ interface OrderEmailData {
   total: number
   address: string
   city: string
+  // Present for customer self-placed orders (from session user, may differ from delivery)
+  billingName?: string | null
+  billingEmail?: string | null
+  placedByStaff?: boolean
 }
 
 function formatPrice(n: number) {
@@ -88,6 +92,15 @@ function itemsTable(items: OrderItem[]) {
 }
 
 export async function sendOrderConfirmationEmail(data: OrderEmailData) {
+  const showBilling = !data.placedByStaff && data.billingName && data.billingName !== data.firstName
+
+  const billingBlock = showBilling ? `
+    <div style="background:#f9f9f9;border-radius:8px;padding:16px;font-size:13px;color:#555;margin-bottom:12px">
+      <strong style="color:#111;display:block;margin-bottom:4px">Bill To</strong>
+      ${data.billingName}${data.billingEmail ? `<br/>${data.billingEmail}` : ''}
+    </div>
+  ` : ''
+
   await send(data.email, `Order Confirmed #${data.orderNumber} — Matin Sanitary`, `
     <h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Thank you, ${data.firstName}!</h2>
     <p style="color:#555;font-size:14px;margin-bottom:24px">Your order <strong>#${data.orderNumber}</strong> has been placed and is being processed.</p>
@@ -108,6 +121,11 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
         <td style="font-size:13px;color:#555;padding:4px 0">Subtotal</td>
         <td style="font-size:13px;color:#111;text-align:right;padding:4px 0">${formatPrice(data.subtotal)}</td>
       </tr>
+      ${data.discount && data.discount > 0 ? `
+      <tr>
+        <td style="font-size:13px;color:#16a34a;padding:4px 0">Discount</td>
+        <td style="font-size:13px;color:#16a34a;text-align:right;padding:4px 0">−${formatPrice(data.discount)}</td>
+      </tr>` : ''}
       <tr>
         <td style="font-size:13px;color:#555;padding:4px 0">Delivery</td>
         <td style="font-size:13px;color:#111;text-align:right;padding:4px 0">${data.shipping === 0 ? 'Free' : formatPrice(data.shipping)}</td>
@@ -118,8 +136,10 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
       </tr>
     </table>
 
+    ${billingBlock}
     <div style="background:#f9f9f9;border-radius:8px;padding:16px;font-size:13px;color:#555;margin-bottom:24px">
-      <strong style="color:#111;display:block;margin-bottom:4px">Delivery Address</strong>
+      <strong style="color:#111;display:block;margin-bottom:4px">${showBilling ? 'Ship To' : 'Delivery Address'}</strong>
+      ${data.firstName}<br/>
       ${data.address}, ${data.city}
     </div>
 
