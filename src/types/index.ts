@@ -11,9 +11,11 @@ export interface ProductWithRelations extends Product {
   brand?: Brand | null
 }
 
-export interface SerializedProduct extends Omit<Product, 'price' | 'salePrice'> {
+export interface SerializedProduct extends Omit<Product, 'price' | 'salePrice' | 'buyingPrice' | 'dealerPrice'> {
   price: number
   salePrice: number | null
+  buyingPrice: number | null
+  dealerPrice: number | null
   category?: Category | null
   brand?: Brand | null
 }

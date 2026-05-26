@@ -33,6 +33,14 @@ export function generateOrderNumber() {
   return `MS-${timestamp}-${random}`
 }
 
-export function serializeProduct<T extends { price: any; salePrice: any }>(p: T): Omit<T, 'price' | 'salePrice'> & { price: number; salePrice: number | null } {
-  return { ...p, price: Number(p.price), salePrice: p.salePrice != null ? Number(p.salePrice) : null }
+export function serializeProduct<T extends { price: any; salePrice: any; buyingPrice?: any; dealerPrice?: any }>(
+  p: T
+): Omit<T, 'price' | 'salePrice' | 'buyingPrice' | 'dealerPrice'> & { price: number; salePrice: number | null; buyingPrice: number | null; dealerPrice: number | null } {
+  return {
+    ...p,
+    price: Number(p.price),
+    salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+    buyingPrice: p.buyingPrice != null ? Number(p.buyingPrice) : null,
+    dealerPrice: p.dealerPrice != null ? Number(p.dealerPrice) : null,
+  }
 }

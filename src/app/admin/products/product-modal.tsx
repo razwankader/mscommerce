@@ -27,6 +27,8 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
     sku: product?.sku || '',
     price: product?.price || '',
     salePrice: product?.salePrice || '',
+    buyingPrice: product?.buyingPrice || '',
+    dealerPrice: product?.dealerPrice || '',
     stock: product?.stock || 0,
     categoryId: product?.categoryId || '',
     brandId: product?.brandId || '',
@@ -68,7 +70,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, price: Number(form.price), salePrice: form.salePrice ? Number(form.salePrice) : null, stock: Number(form.stock), barcode: form.barcode || null }),
+        body: JSON.stringify({ ...form, price: Number(form.price), salePrice: form.salePrice ? Number(form.salePrice) : null, buyingPrice: form.buyingPrice ? Number(form.buyingPrice) : null, dealerPrice: form.dealerPrice ? Number(form.dealerPrice) : null, stock: Number(form.stock), barcode: form.barcode || null }),
       })
       if (!res.ok) throw new Error(await res.text())
       onSuccess()
@@ -140,11 +142,25 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
               placeholder="0"
             />
             <Input
-              label="Sale Price (৳)"
+              label="Sale Price / MRP (৳)"
               type="number"
               value={form.salePrice}
               onChange={(e) => setForm({ ...form, salePrice: e.target.value })}
               placeholder="Leave empty if no discount"
+            />
+            <Input
+              label="Buying Price (৳)"
+              type="number"
+              value={form.buyingPrice}
+              onChange={(e) => setForm({ ...form, buyingPrice: e.target.value })}
+              placeholder="Manufacturer / importer cost"
+            />
+            <Input
+              label="Dealer Price (৳)"
+              type="number"
+              value={form.dealerPrice}
+              onChange={(e) => setForm({ ...form, dealerPrice: e.target.value })}
+              placeholder="Wholesale price for retailers"
             />
             <Input
               label="SKU"

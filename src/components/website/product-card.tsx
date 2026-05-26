@@ -19,10 +19,13 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart()
   const { toggle, isWishlisted } = useWishlist()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [added, setAdded] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [dealerRevealed, setDealerRevealed] = useState(false)
+
+  const isStaff = (session?.user?.permissions?.length ?? 0) > 0
 
   async function handleWishlist(e: React.MouseEvent) {
     e.preventDefault()
@@ -44,6 +47,7 @@ export function ProductCard({ product }: ProductCardProps) {
       name: product.name,
       price: product.price,
       salePrice: product.salePrice,
+      dealerPrice: product.dealerPrice ?? null,
       image: product.images?.[0] ?? null,
     })
     setAdded(true)
@@ -116,6 +120,19 @@ export function ProductCard({ product }: ProductCardProps) {
               <span className="text-base font-bold text-brand">
                 {formatPrice(product.price)}
               </span>
+            )}
+            {isStaff && product.dealerPrice != null && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setDealerRevealed(v => !v) }}
+                className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
+              >
+                <span>Dealer Price</span>
+                {dealerRevealed
+                  ? <span className="font-bold">{formatPrice(product.dealerPrice)}</span>
+                  : <span className="text-gray-400">— tap to reveal</span>
+                }
+              </button>
             )}
           </div>
           <div className="flex items-center gap-1.5">

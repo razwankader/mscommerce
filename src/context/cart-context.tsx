@@ -8,6 +8,7 @@ export interface CartItem {
   name: string
   price: number
   salePrice: number | null
+  dealerPrice: number | null   // wholesale price — visible to staff only
   customPrice: number | null   // staff price override (must be ≤ original effective price)
   image: string | null
   quantity: number
@@ -55,7 +56,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (existing) {
         return prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)
       }
-      return [...prev, { ...item, quantity: 1, customPrice: null }]
+      return [...prev, { ...item, quantity: 1, customPrice: null, dealerPrice: item.dealerPrice ?? null }]
     })
   }, [])
 

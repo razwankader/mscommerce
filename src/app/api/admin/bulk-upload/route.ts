@@ -11,6 +11,8 @@ interface CsvRow {
   barcode: string
   price: string
   salePrice: string
+  buyingPrice: string
+  dealerPrice: string
   stock: string
   status: string
   featured: string
@@ -76,6 +78,8 @@ export async function POST(req: NextRequest) {
 
     const price = parseFloat(row.price)
     const salePrice = row.salePrice ? parseFloat(row.salePrice) : null
+    const buyingPrice = row.buyingPrice ? parseFloat(row.buyingPrice) : null
+    const dealerPrice = row.dealerPrice ? parseFloat(row.dealerPrice) : null
     const stock = parseInt(row.stock || '0', 10)
     const status = ['ACTIVE', 'INACTIVE', 'DRAFT'].includes(row.status?.toUpperCase())
       ? (row.status.toUpperCase() as 'ACTIVE' | 'INACTIVE' | 'DRAFT')
@@ -100,7 +104,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         await prisma.product.update({
           where: { sku: row.sku },
-          data: { name: row.name, price, salePrice, stock, status, featured, bundle, images, categoryId, brandId,
+          data: { name: row.name, price, salePrice, buyingPrice, dealerPrice, stock, status, featured, bundle, images, categoryId, brandId,
             barcode, shortDesc: row.shortDesc || null, description: row.description || null,
             metaTitle: row.metaTitle || null, metaDesc: row.metaDesc || null },
         })
@@ -109,7 +113,7 @@ export async function POST(req: NextRequest) {
       } else {
         const slug = slugify(row.name) + '-' + Date.now() + '-' + i
         const created = await prisma.product.create({
-          data: { name: row.name, slug, sku: row.sku, price, salePrice, stock, status, featured, bundle, images,
+          data: { name: row.name, slug, sku: row.sku, price, salePrice, buyingPrice, dealerPrice, stock, status, featured, bundle, images,
             categoryId, brandId, barcode, shortDesc: row.shortDesc || null, description: row.description || null,
             metaTitle: row.metaTitle || null, metaDesc: row.metaDesc || null },
         })

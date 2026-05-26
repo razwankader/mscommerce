@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { name, description, shortDesc, sku, barcode, price, salePrice, stock, images, categoryId, brandId, featured, bundle, status, metaTitle, metaDesc } = body
+  const { name, description, shortDesc, sku, barcode, price, salePrice, buyingPrice, dealerPrice, stock, images, categoryId, brandId, featured, bundle, status, metaTitle, metaDesc } = body
 
   if (!name || !price) {
     return NextResponse.json({ error: 'Name and price required' }, { status: 400 })
@@ -63,6 +63,8 @@ export async function POST(req: NextRequest) {
       barcode: barcode || null,
       price,
       salePrice: salePrice || null,
+      buyingPrice: buyingPrice || null,
+      dealerPrice: dealerPrice || null,
       stock: stock || 0,
       images: images || [],
       categoryId: categoryId || null,

@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     },
     select: {
       id: true, name: true, slug: true, sku: true,
-      barcode: true, price: true, salePrice: true, images: true, stock: true,
+      barcode: true, price: true, salePrice: true, dealerPrice: true, images: true, stock: true,
     },
   })
 

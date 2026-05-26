@@ -36,7 +36,7 @@ function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
         return
       }
       const p = await res.json()
-      addItem({ id: p.id, slug: p.slug, name: p.name, price: p.price, salePrice: p.salePrice, image: p.images?.[0] ?? null })
+      addItem({ id: p.id, slug: p.slug, name: p.name, price: p.price, salePrice: p.salePrice, dealerPrice: p.dealerPrice ?? null, image: p.images?.[0] ?? null })
       onAdd(p.name)
       lastScanned.current = ''
       setScanPaused(false)
@@ -314,7 +314,16 @@ export default function CartPage() {
   const router = useRouter()
   const [shipping, setShipping] = useState<ShippingConfig | null>(null)
   const [addedToast, setAddedToast] = useState<string | null>(null)
+  const [revealedDealerPrices, setRevealedDealerPrices] = useState<Set<string>>(new Set())
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
+
+  function toggleDealerPrice(id: string) {
+    setRevealedDealerPrices(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   const handleScannedAdd = useCallback((name: string) => {
     setAddedToast(name)
@@ -432,6 +441,20 @@ export default function CartPage() {
                       <span className="text-xs text-gray-400 line-through">{formatPrice(item.price)}</span>
                     )}
                   </div>
+                  {/* Dealer price — staff only, click to reveal */}
+                  {isStaff && item.dealerPrice != null && (
+                    <button
+                      type="button"
+                      onClick={() => toggleDealerPrice(item.id)}
+                      className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
+                    >
+                      <span>Dealer Price:</span>
+                      {revealedDealerPrices.has(item.id)
+                        ? <span className="font-bold">{formatPrice(item.dealerPrice)}</span>
+                        : <span className="text-gray-400">tap to reveal</span>
+                      }
+                    </button>
+                  )}
                   {/* Staff price override */}
                   {isStaff && (
                     <PriceOverride
