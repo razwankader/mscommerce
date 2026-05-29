@@ -9,6 +9,8 @@ interface OrderDetail {
   id: string
   orderNumber: string
   status: string
+  isPaid: boolean
+  dueAmount: number
   subtotal: string | number
   shipping: string | number
   tax: string | number
@@ -93,6 +95,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </Link>
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${STATUS_STYLES[order.status] || ''}`}>
             {order.status}
+          </span>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${order.isPaid ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+            {order.isPaid ? 'Paid' : `Due ${formatPrice(order.dueAmount)}`}
           </span>
         </div>
       </div>

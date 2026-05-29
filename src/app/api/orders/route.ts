@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { generateOrderNumber } from '@/lib/utils'
 import { getShippingConfig, calcShipping } from '@/lib/shipping'
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '10')
   const status = searchParams.get('status') || ''
   const search = searchParams.get('search') || ''
+  const paymentStatus = searchParams.get('paymentStatus') || '' // 'paid' | 'due'
 
   const where: any = {}
   if (status) where.status = status
@@ -26,6 +28,16 @@ export async function GET(req: NextRequest) {
       { email: { contains: search, mode: 'insensitive' } },
       { firstName: { contains: search, mode: 'insensitive' } },
     ]
+  }
+
+  if (paymentStatus) {
+    // Use SQL subquery to find order IDs where SUM(payments.amount) >= total (paid) or < total (due)
+    const rows = await prisma.$queryRaw<{ id: string }[]>(
+      paymentStatus === 'paid'
+        ? Prisma.sql`SELECT id FROM orders WHERE COALESCE((SELECT SUM(amount::numeric) FROM order_payments WHERE "orderId" = orders.id), 0) >= total::numeric`
+        : Prisma.sql`SELECT id FROM orders WHERE COALESCE((SELECT SUM(amount::numeric) FROM order_payments WHERE "orderId" = orders.id), 0) < total::numeric`
+    )
+    where.id = { in: rows.map(r => r.id) }
   }
 
   const [data, total] = await Promise.all([
@@ -39,7 +51,12 @@ export async function GET(req: NextRequest) {
     prisma.order.count({ where }),
   ])
 
-  return NextResponse.json({ data, total, page, limit, totalPages: Math.ceil(total / limit) })
+  const enriched = data.map((o: any) => {
+    const paid = (o.payments || []).reduce((sum: number, p: any) => sum + (p.amount ? Number(p.amount) : 0), 0)
+    return { ...o, isPaid: paid >= Number(o.total) }
+  })
+
+  return NextResponse.json({ data: enriched, total, page, limit, totalPages: Math.ceil(total / limit) })
 }
 
 export async function POST(req: NextRequest) {

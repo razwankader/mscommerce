@@ -20,10 +20,13 @@ export function formatPrice(amount: number | string, currency = '৳') {
 }
 
 export function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString('en-US', {
+  return new Date(date).toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
   })
 }
 

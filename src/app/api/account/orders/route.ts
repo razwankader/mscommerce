@@ -14,9 +14,17 @@ export async function GET() {
           product: { select: { id: true, name: true, slug: true, images: true } },
         },
       },
+      payments: { select: { amount: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
 
-  return NextResponse.json({ data: orders })
+  const data = orders.map(o => {
+    const paid = o.payments.reduce((sum, p) => sum + (p.amount ? Number(p.amount) : 0), 0)
+    const total = Number(o.total)
+    const isPaid = paid >= total
+    return { ...o, isPaid, dueAmount: isPaid ? 0 : total - paid }
+  })
+
+  return NextResponse.json({ data })
 }

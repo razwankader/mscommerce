@@ -23,12 +23,18 @@ export default async function InvoicePage({ params }: { params: Promise<{ orderN
     include: {
       user: { select: { name: true, email: true } },
       orderItems: { include: { product: true } },
+      payments: { select: { amount: true } },
     },
   })
 
   if (!order) notFound()
 
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
+
+  const totalPaid = order.payments.reduce((sum, p) => sum + (p.amount ? Number(p.amount) : 0), 0)
+  const orderTotal = Number(order.total)
+  const isPaid = totalPaid >= orderTotal
+  const dueAmount = isPaid ? 0 : orderTotal - totalPaid
 
   // Access control:
   // - Staff: always allowed
@@ -85,15 +91,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ orderN
               <p className="text-3xl font-black text-gray-200 tracking-tight">INVOICE</p>
               <p className="text-sm font-semibold text-gray-700 mt-1">#{order.orderNumber}</p>
               <p className="text-xs text-gray-400 mt-1">Date: {fmtDate(order.createdAt)}</p>
-              {!order.placedByStaff && (
-                <span className={`inline-block mt-2 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
-                  order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
-                  order.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
-                  'bg-orange-100 text-orange-600'
-                }`}>
-                  {order.status}
-                </span>
-              )}
+              <span className={`inline-block mt-2 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+              }`}>
+                {isPaid ? 'Paid' : `Due ${fmt(dueAmount)}`}
+              </span>
             </div>
           </div>
 

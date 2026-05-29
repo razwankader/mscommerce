@@ -15,9 +15,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           product: { select: { id: true, name: true, slug: true, images: true } },
         },
       },
+      payments: { select: { amount: true } },
     },
   })
 
   if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(order)
+
+  const paid = order.payments.reduce((sum, p) => sum + (p.amount ? Number(p.amount) : 0), 0)
+  const total = Number(order.total)
+  const isPaid = paid >= total
+  return NextResponse.json({ ...order, isPaid, dueAmount: isPaid ? 0 : total - paid })
 }

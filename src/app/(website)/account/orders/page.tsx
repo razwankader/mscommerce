@@ -9,6 +9,8 @@ interface Order {
   id: string
   orderNumber: string
   status: string
+  isPaid: boolean
+  dueAmount: number
   total: string | number
   subtotal: string | number
   shipping: string | number
@@ -71,6 +73,9 @@ export default function OrdersPage() {
                     <span className="text-sm font-bold text-gray-900">#{order.orderNumber}</span>
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                       {order.status}
+                    </span>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${order.isPaid ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                      {order.isPaid ? 'Paid' : `Due ${formatPrice(order.dueAmount)}`}
                     </span>
                   </div>
                   <p className="text-xs text-gray-400">
