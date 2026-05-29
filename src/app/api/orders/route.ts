@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const [data, total] = await Promise.all([
     prisma.order.findMany({
       where,
-      include: { orderItems: { include: { product: true } } },
+      include: { orderItems: { include: { product: true } }, payments: { orderBy: { paidAt: 'asc' } } },
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -44,7 +44,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { items, firstName, lastName, email, phone, address, city, state, zipCode, notes, discount: rawDiscount } = body
+  const { items, firstName, lastName, email, phone, address, city, state, zipCode, notes, discount: rawDiscount, payments: rawPayments } = body
+  // rawPayments: Array<{ method, amount?, referenceId?, bankName?, paidAt? }> — staff only
 
   if (!items || items.length === 0) {
     return NextResponse.json({ error: 'No items in order' }, { status: 400 })
@@ -129,6 +130,28 @@ export async function POST(req: NextRequest) {
         include: { orderItems: { include: { product: true } } },
       })
 
+      // Create payment records (staff only)
+      if (isStaff && Array.isArray(rawPayments) && rawPayments.length > 0) {
+        const VALID_METHODS = ['COD', 'BKASH', 'NAGAD', 'ROCKET', 'BANK']
+        await tx.orderPayment.createMany({
+          data: rawPayments
+            .filter((p: any) => VALID_METHODS.includes(p.method))
+            .map((p: any) => ({
+              orderId: order.id,
+              method: p.method,
+              amount: p.amount ? Number(p.amount) : null,
+              referenceId: p.referenceId || null,
+              bankName: p.method === 'BANK' ? (p.bankName || null) : null,
+              paidAt: p.paidAt ? new Date(p.paidAt) : new Date(),
+            })),
+        })
+      } else if (!isStaff) {
+        // Customer orders default to COD
+        await tx.orderPayment.create({
+          data: { orderId: order.id, method: 'COD', paidAt: new Date() },
+        })
+      }
+
       // Log SALE stock transactions
       await tx.stockTransaction.createMany({
         data: items.map((item: any) => ({
@@ -163,7 +186,6 @@ export async function POST(req: NextRequest) {
         address,
         city,
         placedByStaff: isStaff,
-        // For customer orders, billing = session user (may differ from delivery recipient)
         billingName: isStaff ? null : (session?.user?.name ?? null),
         billingEmail: isStaff ? null : (session?.user?.email ?? null),
       }).catch(err => console.error('[order-confirm-email]', err))

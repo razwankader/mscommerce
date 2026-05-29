@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Search } from 'lucide-react'
+import { Eye, Search, AlertTriangle, Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DataTable } from '@/components/admin/data-table'
 import { formatPrice, formatDate } from '@/lib/utils'
@@ -25,6 +25,61 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [viewOrder, setViewOrder] = useState<any>(null)
+  type NewPayment = { method: string; amount: string; referenceId: string; bankName: string; paidAt: string }
+  const EMPTY_PAYMENT: NewPayment = { method: 'COD', amount: '', referenceId: '', bankName: '', paidAt: '' }
+  const [newPayment, setNewPayment] = useState<NewPayment>(EMPTY_PAYMENT)
+  const [paymentError, setPaymentError] = useState('')
+  const [savingPayment, setSavingPayment] = useState(false)
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
+  const [editingPayment, setEditingPayment] = useState<NewPayment>(EMPTY_PAYMENT)
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  function openOrder(row: any) {
+    setViewOrder(row)
+    setNewPayment(EMPTY_PAYMENT)
+    setPaymentError('')
+    setEditingPaymentId(null)
+  }
+
+  function startEdit(p: any) {
+    setEditingPaymentId(p.id)
+    setEditingPayment({
+      method: p.method,
+      amount: p.amount != null ? String(Number(p.amount)) : '',
+      referenceId: p.referenceId || '',
+      bankName: p.bankName || '',
+      paidAt: p.paidAt ? new Date(p.paidAt).toISOString().slice(0, 16) : '',
+    })
+  }
+
+  async function saveEdit(paymentId: string) {
+    if (!viewOrder) return
+    setSavingEdit(true)
+    const res = await fetch(`/api/orders/${viewOrder.id}/payments/${paymentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        method: editingPayment.method,
+        amount: editingPayment.amount ? Number(editingPayment.amount) : null,
+        referenceId: editingPayment.referenceId || null,
+        bankName: editingPayment.method === 'BANK' ? (editingPayment.bankName || null) : null,
+        paidAt: editingPayment.paidAt || null,
+      }),
+    })
+    setSavingEdit(false)
+    if (!res.ok) {
+      const err = await res.json()
+      setPaymentError(err.error || 'Failed to update payment')
+      return
+    }
+    const updated = await res.json()
+    setViewOrder((o: any) => ({
+      ...o,
+      payments: (o.payments || []).map((p: any) => p.id === paymentId ? updated : p),
+    }))
+    setEditingPaymentId(null)
+    qc.invalidateQueries({ queryKey: ['orders'] })
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['orders', page, search, statusFilter],
@@ -35,13 +90,53 @@ export default function OrdersPage() {
   })
 
   async function updateStatus(id: string, status: string) {
-    await fetch(`/api/orders/${id}`, {
+    setPaymentError('')
+    const res = await fetch(`/api/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
+    if (!res.ok) {
+      const err = await res.json()
+      setPaymentError(err.error || 'Failed to update status')
+      return
+    }
     qc.invalidateQueries({ queryKey: ['orders'] })
     if (viewOrder?.id === id) setViewOrder((o: any) => ({ ...o, status }))
+  }
+
+  async function addPaymentToOrder() {
+    if (!viewOrder) return
+    setSavingPayment(true)
+    setPaymentError('')
+    const res = await fetch(`/api/orders/${viewOrder.id}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        method: newPayment.method,
+        amount: newPayment.amount ? Number(newPayment.amount) : null,
+        referenceId: newPayment.referenceId || null,
+        bankName: newPayment.method === 'BANK' ? (newPayment.bankName || null) : null,
+        paidAt: newPayment.paidAt || null,
+      }),
+    })
+    setSavingPayment(false)
+    if (!res.ok) {
+      const err = await res.json()
+      setPaymentError(err.error || 'Failed to add payment')
+      return
+    }
+    const added = await res.json()
+    setViewOrder((o: any) => ({ ...o, payments: [...(o.payments || []), added] }))
+    setNewPayment(EMPTY_PAYMENT)
+    qc.invalidateQueries({ queryKey: ['orders'] })
+  }
+
+  async function deletePayment(paymentId: string) {
+    if (!viewOrder) return
+    await fetch(`/api/orders/${viewOrder.id}/payments/${paymentId}`, { method: 'DELETE' })
+    setViewOrder((o: any) => ({ ...o, payments: (o.payments || []).filter((p: any) => p.id !== paymentId) }))
+    qc.invalidateQueries({ queryKey: ['orders'] })
   }
 
   const columns = [
@@ -63,7 +158,7 @@ export default function OrdersPage() {
       key: 'id',
       label: 'Actions',
       render: (_: string, row: any) => (
-        <button onClick={() => setViewOrder(row)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-brand">
+        <button onClick={() => openOrder(row)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-brand">
           <Eye size={14} />
         </button>
       ),
@@ -117,7 +212,7 @@ export default function OrdersPage() {
                 <h2 className="text-lg font-semibold">Order {viewOrder.orderNumber}</h2>
                 <p className="text-xs text-gray-500">{formatDate(viewOrder.createdAt)}</p>
               </div>
-              <button onClick={() => setViewOrder(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">✕</button>
+              <button onClick={() => { setViewOrder(null); setPaymentError('') }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">✕</button>
             </div>
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-3">
@@ -130,6 +225,144 @@ export default function OrdersPage() {
                   {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
+
+              {/* Payment Info */}
+              <div className="border border-gray-100 rounded-xl p-4 space-y-3 bg-gray-50">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Payments</p>
+
+                {/* Existing payments */}
+                {(viewOrder.payments || []).length > 0 && (
+                  <div className="space-y-2">
+                    {(viewOrder.payments || []).map((p: any) => (
+                      <div key={p.id} className="bg-white rounded-lg border border-gray-200 px-3 py-2 text-xs">
+                        {editingPaymentId === p.id ? (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {(['COD', 'BKASH', 'NAGAD', 'ROCKET', 'BANK'] as const).map((m) => (
+                                <button key={m} type="button"
+                                  onClick={() => setEditingPayment(e => ({ ...e, method: m, referenceId: '', bankName: '' }))}
+                                  className={`py-1 rounded-md text-[11px] font-semibold border transition-colors ${editingPayment.method === m ? 'bg-brand text-white border-brand' : 'text-gray-600 border-gray-200 hover:border-brand'}`}
+                                >
+                                  {m === 'COD' ? 'Cash' : m === 'BANK' ? 'Bank' : m.charAt(0) + m.slice(1).toLowerCase()}
+                                </button>
+                              ))}
+                            </div>
+                            <input type="number" value={editingPayment.amount}
+                              onChange={(e) => setEditingPayment(p => ({ ...p, amount: e.target.value }))}
+                              placeholder="Amount ৳ (optional)"
+                              className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                            />
+                            {editingPayment.method === 'BANK' && (
+                              <input type="text" value={editingPayment.bankName}
+                                onChange={(e) => setEditingPayment(p => ({ ...p, bankName: e.target.value }))}
+                                placeholder="Bank name"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                              />
+                            )}
+                            {editingPayment.method !== 'COD' && (
+                              <>
+                                <input type="text" value={editingPayment.referenceId}
+                                  onChange={(e) => setEditingPayment(p => ({ ...p, referenceId: e.target.value }))}
+                                  placeholder="Reference / TrxID"
+                                  className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                                />
+                                <input type="datetime-local" value={editingPayment.paidAt}
+                                  onChange={(e) => setEditingPayment(p => ({ ...p, paidAt: e.target.value }))}
+                                  className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                                />
+                              </>
+                            )}
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => saveEdit(p.id)} disabled={savingEdit}
+                                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-brand text-white text-[11px] font-semibold hover:bg-orange-600 disabled:opacity-60"
+                              >
+                                <Check size={11} /> {savingEdit ? 'Saving…' : 'Save'}
+                              </button>
+                              <button type="button" onClick={() => setEditingPaymentId(null)}
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 text-[11px] hover:bg-gray-50"
+                              >
+                                <X size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <span className="font-semibold text-gray-800">
+                                {p.method === 'COD' ? 'Cash' : p.method === 'BANK' ? `Bank${p.bankName ? ` — ${p.bankName}` : ''}` : p.method.charAt(0) + p.method.slice(1).toLowerCase()}
+                              </span>
+                              {p.amount != null && <span className="ml-2 text-brand font-semibold">৳{Number(p.amount).toLocaleString('en-BD')}</span>}
+                              {p.referenceId && <div className="text-gray-500 mt-0.5">Ref: {p.referenceId}</div>}
+                              <div className="text-gray-400 mt-0.5">{new Date(p.paidAt).toLocaleString('en-BD')}</div>
+                            </div>
+                            <div className="flex items-center gap-1.5 ml-2 mt-0.5">
+                              <button type="button" onClick={() => startEdit(p)} className="text-gray-400 hover:text-brand transition-colors">
+                                <Pencil size={12} />
+                              </button>
+                              <button type="button" onClick={() => deletePayment(p.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new payment */}
+                <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-600 flex items-center gap-1"><Plus size={12} /> Add Payment</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(['COD', 'BKASH', 'NAGAD', 'ROCKET', 'BANK'] as const).map((m) => (
+                      <button key={m} type="button"
+                        onClick={() => setNewPayment(p => ({ ...p, method: m, referenceId: '', bankName: '' }))}
+                        className={`py-1 rounded-md text-[11px] font-semibold border transition-colors ${newPayment.method === m ? 'bg-brand text-white border-brand' : 'text-gray-600 border-gray-200 hover:border-brand'}`}
+                      >
+                        {m === 'COD' ? 'Cash' : m === 'BANK' ? 'Bank' : m.charAt(0) + m.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="number" value={newPayment.amount}
+                    onChange={(e) => setNewPayment(p => ({ ...p, amount: e.target.value }))}
+                    placeholder="Amount ৳ (optional)"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                  />
+                  {newPayment.method === 'BANK' && (
+                    <input type="text" value={newPayment.bankName}
+                      onChange={(e) => setNewPayment(p => ({ ...p, bankName: e.target.value }))}
+                      placeholder="Bank name"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                    />
+                  )}
+                  {newPayment.method !== 'COD' && (
+                    <>
+                      <input type="text" value={newPayment.referenceId}
+                        onChange={(e) => setNewPayment(p => ({ ...p, referenceId: e.target.value }))}
+                        placeholder="Reference / TrxID"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                      />
+                      <input type="datetime-local" value={newPayment.paidAt}
+                        onChange={(e) => setNewPayment(p => ({ ...p, paidAt: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:border-brand"
+                      />
+                      <p className="text-[10px] text-gray-400">Leave date/time blank to use current timestamp</p>
+                    </>
+                  )}
+                  <button type="button" onClick={addPaymentToOrder} disabled={savingPayment}
+                    className="w-full py-1.5 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-orange-600 transition-colors disabled:opacity-60"
+                  >
+                    {savingPayment ? 'Saving…' : 'Add Payment'}
+                  </button>
+                </div>
+              </div>
+
+              {paymentError && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                  <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                  {paymentError}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>

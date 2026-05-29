@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Banknote, ShoppingBag, Loader2 } from 'lucide-react'
+import { ArrowLeft, Banknote, ShoppingBag, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useCart } from '@/context/cart-context'
 import { useSession } from 'next-auth/react'
 
@@ -48,6 +48,18 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false)
   const [shippingConfig, setShippingConfig] = useState<ShippingConfig | null>(null)
   const [prefilled, setPrefilled] = useState(false)
+  type PaymentEntry = { id: number; method: string; amount: string; referenceId: string; bankName: string; paidAt: string }
+  const [payments, setPayments] = useState<PaymentEntry[]>([{ id: Date.now(), method: 'COD', amount: '', referenceId: '', bankName: '', paidAt: '' }])
+
+  function addPayment() {
+    setPayments(p => [...p, { id: Date.now(), method: 'COD', amount: '', referenceId: '', bankName: '', paidAt: '' }])
+  }
+  function removePayment(id: number) {
+    setPayments(p => p.filter(e => e.id !== id))
+  }
+  function updatePayment(id: number, field: keyof PaymentEntry, value: string) {
+    setPayments(p => p.map(e => e.id === id ? { ...e, [field]: value, ...(field === 'method' ? { referenceId: '', bankName: '' } : {}) } : e))
+  }
 
   useEffect(() => {
     fetch('/api/shipping-config')
@@ -117,6 +129,13 @@ export default function CheckoutPage() {
           state: form.state,
           notes: form.notes,
           discount,
+          payments: isStaff ? payments.map(p => ({
+            method: p.method,
+            amount: p.amount ? Number(p.amount) : null,
+            referenceId: p.referenceId || null,
+            bankName: p.method === 'BANK' ? (p.bankName || null) : null,
+            paidAt: p.paidAt || null,
+          })) : undefined,
           items: items.map((i) => ({
             productId: i.id,
             quantity: i.quantity,
@@ -252,16 +271,88 @@ export default function CheckoutPage() {
             {/* Payment Method */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-base font-bold text-gray-900 mb-4">Payment Method</h2>
-              <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-brand bg-brand/5">
-                <Banknote size={22} className="text-brand shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Cash on Delivery</p>
-                  <p className="text-xs text-gray-500">Pay when your order arrives</p>
+              {isStaff ? (
+                <div className="space-y-3">
+                  {payments.map((entry, idx) => (
+                    <div key={entry.id} className="border border-gray-200 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-500">Payment {idx + 1}</span>
+                        {payments.length > 1 && (
+                          <button type="button" onClick={() => removePayment(entry.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['COD', 'BKASH', 'NAGAD', 'ROCKET', 'BANK'] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => updatePayment(entry.id, 'method', m)}
+                            className={`py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                              entry.method === m ? 'bg-brand text-white border-brand' : 'bg-white text-gray-600 border-gray-200 hover:border-brand'
+                            }`}
+                          >
+                            {m === 'COD' ? 'Cash' : m === 'BANK' ? 'Bank' : m.charAt(0) + m.slice(1).toLowerCase()}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="number"
+                        value={entry.amount}
+                        onChange={(e) => updatePayment(entry.id, 'amount', e.target.value)}
+                        placeholder="Amount ৳ (optional)"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                      />
+                      {entry.method !== 'COD' && (
+                        <>
+                          {entry.method === 'BANK' && (
+                            <input
+                              type="text"
+                              value={entry.bankName}
+                              onChange={(e) => updatePayment(entry.id, 'bankName', e.target.value)}
+                              placeholder="Bank name (e.g. Dutch-Bangla)"
+                              className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                            />
+                          )}
+                          <input
+                            type="text"
+                            value={entry.referenceId}
+                            onChange={(e) => updatePayment(entry.id, 'referenceId', e.target.value)}
+                            placeholder="Reference / Transaction ID"
+                            className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                          />
+                          <input
+                            type="datetime-local"
+                            value={entry.paidAt}
+                            onChange={(e) => updatePayment(entry.id, 'paidAt', e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                          />
+                          <p className="text-[10px] text-gray-400">Leave date/time blank to use current timestamp</p>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addPayment}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-brand hover:text-brand transition-colors"
+                  >
+                    <Plus size={15} /> Add Another Payment
+                  </button>
                 </div>
-                <div className="ml-auto w-4 h-4 rounded-full border-2 border-brand bg-brand flex items-center justify-center shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
+              ) : (
+                <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-brand bg-brand/5">
+                  <Banknote size={22} className="text-brand shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Cash on Delivery</p>
+                    <p className="text-xs text-gray-500">Pay when your order arrives</p>
+                  </div>
+                  <div className="ml-auto w-4 h-4 rounded-full border-2 border-brand bg-brand flex items-center justify-center shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
