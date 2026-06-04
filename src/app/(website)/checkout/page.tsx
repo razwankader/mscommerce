@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Banknote, ShoppingBag, Loader2, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Banknote, ShoppingBag, Loader2, Plus, Trash2, Search, UserCheck, UserPlus } from 'lucide-react'
 import { useCart } from '@/context/cart-context'
 import { useSession } from 'next-auth/react'
 
@@ -48,6 +48,13 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false)
   const [shippingConfig, setShippingConfig] = useState<ShippingConfig | null>(null)
   const [prefilled, setPrefilled] = useState(false)
+
+  // Staff: offline customer lookup
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [lookingUp, setLookingUp] = useState(false)
+  const [offlineCustomerId, setOfflineCustomerId] = useState<string | null>(null)
+  const [customerStatus, setCustomerStatus] = useState<'idle' | 'found' | 'new'>('idle')
+
   type PaymentEntry = { id: number; method: string; amount: string; referenceId: string; bankName: string; paidAt: string }
   const [payments, setPayments] = useState<PaymentEntry[]>([{ id: Date.now(), method: 'COD', amount: '', referenceId: '', bankName: '', paidAt: '' }])
 
@@ -59,6 +66,39 @@ export default function CheckoutPage() {
   }
   function updatePayment(id: number, field: keyof PaymentEntry, value: string) {
     setPayments(p => p.map(e => e.id === id ? { ...e, [field]: value, ...(field === 'method' ? { referenceId: '', bankName: '' } : {}) } : e))
+  }
+
+  async function lookupCustomer() {
+    if (!customerPhone.trim()) return
+    setLookingUp(true)
+    setOfflineCustomerId(null)
+    setCustomerStatus('idle')
+    // Clear form first
+    setForm(INITIAL)
+    const res = await fetch(`/api/customers/lookup?phone=${encodeURIComponent(customerPhone.trim())}`)
+    const data = await res.json()
+    setLookingUp(false)
+    if (data && data.id) {
+      // Existing offline customer — prefill from profile
+      const parts = (data.name || '').trim().split(' ')
+      setForm({
+        firstName: parts[0] || '',
+        lastName: parts.slice(1).join(' ') || '',
+        phone: data.phone || customerPhone.trim(),
+        email: data.email || '',
+        address: data.address || '',
+        city: data.city || '',
+        state: '',
+        notes: '',
+      })
+      setOfflineCustomerId(data.id)
+      setCustomerStatus('found')
+    } else {
+      // New customer — only prefill the searched phone
+      setForm({ ...INITIAL, phone: customerPhone.trim() })
+      setOfflineCustomerId(null)
+      setCustomerStatus('new')
+    }
   }
 
   useEffect(() => {
@@ -129,6 +169,17 @@ export default function CheckoutPage() {
           state: form.state,
           notes: form.notes,
           discount,
+          // Staff: offline customer resolution
+          ...(isStaff && offlineCustomerId && { offlineCustomerId }),
+          ...(isStaff && !offlineCustomerId && customerStatus === 'new' && {
+            createOfflineCustomer: {
+              name: `${form.firstName} ${form.lastName}`.trim(),
+              phone: form.phone,
+              email: form.email || null,
+              address: form.address || null,
+              city: form.city || null,
+            },
+          }),
           payments: isStaff ? payments.map(p => ({
             method: p.method,
             amount: p.amount ? Number(p.amount) : null,
@@ -188,6 +239,43 @@ export default function CheckoutPage() {
                   </Link>
                 )}
               </div>
+
+              {/* Staff: customer phone lookup */}
+              {isStaff && (
+                <div className="mb-5">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Customer Phone Lookup</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={e => { setCustomerPhone(e.target.value); setCustomerStatus('idle'); setOfflineCustomerId(null) }}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), lookupCustomer())}
+                      placeholder="017XXXXXXXX"
+                      className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                    />
+                    <button
+                      type="button"
+                      onClick={lookupCustomer}
+                      disabled={lookingUp || !customerPhone.trim()}
+                      className="px-4 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {lookingUp ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                      Search
+                    </button>
+                  </div>
+                  {customerStatus === 'found' && (
+                    <p className="mt-2 text-xs text-green-700 font-medium flex items-center gap-1.5">
+                      <UserCheck size={13} /> Existing customer found — form prefilled from profile
+                    </p>
+                  )}
+                  {customerStatus === 'new' && (
+                    <p className="mt-2 text-xs text-orange-600 font-medium flex items-center gap-1.5">
+                      <UserPlus size={13} /> New customer — profile will be created on submit
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="First Name *" error={errors.firstName}>
                   <input

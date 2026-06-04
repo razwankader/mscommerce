@@ -57,23 +57,27 @@ enum PageStatus {
 model User {
   id            String    @id @default(cuid())
   name          String
-  email         String    @unique
+  email         String?   @unique
   emailVerified DateTime?
   password      String?
   roleId        String
   phone         String?
+  address       String?
+  city          String?
   image         String?
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   roleRef           Role               @relation(fields: [roleId], references: [id])
-  orders            Order[]
+  orders            Order[]            @relation("OrderCustomer")
+  ordersPlaced      Order[]            @relation("OrderPlacedBy")
   reviews           Review[]
   accounts          Account[]
   wishlistItems     WishlistItem[]
   stockTransactions StockTransaction[]
 
+  @@unique([phone, roleId])
   @@map("users")
 }
 
@@ -259,10 +263,12 @@ model Order {
   zipCode       String?
   notes              String?
   placedByStaff      Boolean       @default(false)
+  placedById         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  user              User?              @relation(fields: [userId], references: [id])
+  user              User?              @relation("OrderCustomer", fields: [userId], references: [id])
+  placedBy          User?              @relation("OrderPlacedBy", fields: [placedById], references: [id])
   orderItems        OrderItem[]
   payments          OrderPayment[]
   stockTransactions StockTransaction[]

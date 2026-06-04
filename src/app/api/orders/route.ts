@@ -61,7 +61,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { items, firstName, lastName, email, phone, address, city, state, zipCode, notes, discount: rawDiscount, payments: rawPayments } = body
+  const {
+    items, firstName, lastName, email, phone, address, city, state, zipCode, notes,
+    discount: rawDiscount, payments: rawPayments,
+    offlineCustomerId,  // staff: existing offline customer id (pre-looked-up)
+    createOfflineCustomer, // staff: { name, phone, email?, address?, city? } — new offline customer
+  } = body
   // rawPayments: Array<{ method, amount?, referenceId?, bankName?, paidAt? }> — staff only
 
   if (!items || items.length === 0) {
@@ -70,6 +75,36 @@ export async function POST(req: NextRequest) {
 
   const session = await auth()
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
+
+  // Resolve offline customer for staff orders
+  let resolvedCustomerId: string | null = null
+  if (isStaff) {
+    if (offlineCustomerId) {
+      // Existing offline customer — use as-is
+      resolvedCustomerId = offlineCustomerId
+    } else if (createOfflineCustomer?.phone) {
+      // New offline customer — create profile
+      const offlineRole = await prisma.role.findUnique({ where: { name: 'OFFLINE_CUSTOMER' } })
+      if (offlineRole) {
+        const parts = (createOfflineCustomer.name || '').trim().split(' ')
+        const newCustomer = await prisma.user.create({
+          data: {
+            name: createOfflineCustomer.name || `${firstName} ${lastName}`.trim(),
+            email: createOfflineCustomer.email || null,
+            phone: createOfflineCustomer.phone,
+            address: createOfflineCustomer.address || null,
+            city: createOfflineCustomer.city || null,
+            roleId: offlineRole.id,
+            isActive: true,
+          },
+        })
+        resolvedCustomerId = newCustomer.id
+      }
+    }
+  } else {
+    // Online customer — use session user
+    resolvedCustomerId = session?.user?.id || null
+  }
 
   const productIds = items.map((i: any) => i.productId)
   const products = await prisma.product.findMany({ where: { id: { in: productIds } } })
@@ -126,7 +161,8 @@ export async function POST(req: NextRequest) {
       const order = await tx.order.create({
         data: {
           orderNumber: generateOrderNumber(),
-          userId: session?.user?.id || null,
+          userId: resolvedCustomerId,
+          placedById: isStaff ? (session?.user?.id || null) : null,
           subtotal,
           discount,
           shipping,
