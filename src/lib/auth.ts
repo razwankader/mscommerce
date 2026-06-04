@@ -13,14 +13,14 @@ const userWithRole = {
   },
 } as const
 
-// Extend PrismaAdapter to assign CUSTOMER role on OAuth user creation
+// Extend PrismaAdapter to assign ONLINE_CUSTOMER role on OAuth user creation
 // (PrismaAdapter doesn't know about our required roleId FK)
 function buildAdapter() {
   const base = PrismaAdapter(prisma)
   return {
     ...base,
     async createUser(data: Parameters<NonNullable<typeof base.createUser>>[0]) {
-      const customerRole = await prisma.role.findUnique({ where: { name: 'CUSTOMER' } })
+      const customerRole = await prisma.role.findUnique({ where: { name: 'ONLINE_CUSTOMER' } })
       return base.createUser!({ ...data, roleId: customerRole?.id } as any)
     },
   }
@@ -59,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         )
         if (!passwordMatch) return null
 
-        return { id: user.id, name: user.name, email: user.email, role: user.roleRef?.name ?? 'CUSTOMER' }
+        return { id: user.id, name: user.name, email: user.email, role: user.roleRef?.name ?? 'ONLINE_CUSTOMER' }
       },
     }),
   ],
@@ -70,7 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: user.email! },
           ...userWithRole,
         })
-        token.role = dbUser?.roleRef?.name ?? 'CUSTOMER'
+        token.role = dbUser?.roleRef?.name ?? 'ONLINE_CUSTOMER'
         token.roleId = dbUser?.roleId ?? null
         token.id = dbUser?.id ?? user.id
         token.permissions = dbUser?.roleRef?.permissions.map(rp => rp.permission.key) ?? []
@@ -83,7 +83,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ...userWithRole,
         }).catch(() => null)
         if (dbUser) {
-          token.role = dbUser.roleRef?.name ?? 'CUSTOMER'
+          token.role = dbUser.roleRef?.name ?? 'ONLINE_CUSTOMER'
           token.roleId = dbUser.roleId ?? null
           token.permissions = dbUser.roleRef?.permissions.map(rp => rp.permission.key) ?? []
         }
@@ -97,7 +97,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: { id: token.id as string },
             ...userWithRole,
           })
-          token.role = dbUser?.roleRef?.name ?? 'CUSTOMER'
+          token.role = dbUser?.roleRef?.name ?? 'ONLINE_CUSTOMER'
           token.roleId = dbUser?.roleId ?? null
           token.permissions = dbUser?.roleRef?.permissions.map(rp => rp.permission.key) ?? []
         }

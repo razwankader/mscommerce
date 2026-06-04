@@ -20,9 +20,10 @@ export async function seedSystemRoles() {
     .map(p => p.id)
 
   const systemRoles = [
-    { name: 'ADMIN',    label: 'Administrator', description: 'Full access to all features',       isSystem: true, permIds: adminPermIds   },
-    { name: 'MANAGER',  label: 'Manager',       description: 'Access to catalog, orders, content', isSystem: true, permIds: managerPermIds },
-    { name: 'CUSTOMER', label: 'Customer',      description: 'Regular store customer, no admin access', isSystem: true, permIds: [] as string[] },
+    { name: 'ADMIN',            label: 'Administrator',   description: 'Full access to all features',                 isSystem: true, permIds: adminPermIds   },
+    { name: 'MANAGER',          label: 'Manager',         description: 'Access to catalog, orders, content',          isSystem: true, permIds: managerPermIds },
+    { name: 'ONLINE_CUSTOMER',  label: 'Online Customer', description: 'Self-registered online customer',             isSystem: true, permIds: [] as string[] },
+    { name: 'OFFLINE_CUSTOMER', label: 'Offline Customer',description: 'Walk-in customer managed by staff, no login', isSystem: true, permIds: [] as string[] },
   ]
 
   for (const { permIds, ...roleData } of systemRoles) {

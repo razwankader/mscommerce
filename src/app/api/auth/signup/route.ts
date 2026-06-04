@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const hashed = await bcrypt.hash(password, 12)
 
-  const customerRole = await prisma.role.findUnique({ where: { name: 'CUSTOMER' } })
+  const customerRole = await prisma.role.findUnique({ where: { name: 'ONLINE_CUSTOMER' } })
   if (!customerRole) return NextResponse.json({ error: 'System not configured' }, { status: 500 })
 
   await prisma.user.create({

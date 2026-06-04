@@ -14,7 +14,8 @@ interface RoleOption { id: string; name: string; label: string }
 const systemRoleBadge: Record<string, any> = {
   ADMIN: 'danger',
   MANAGER: 'info',
-  CUSTOMER: 'default',
+  ONLINE_CUSTOMER: 'default',
+  OFFLINE_CUSTOMER: 'warning',
 }
 
 export default function UsersPage() {

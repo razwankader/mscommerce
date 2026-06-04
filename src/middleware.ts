@@ -15,8 +15,8 @@ export async function middleware(req: NextRequest) {
   if (isAdminRoute) {
     // Not logged in → login page
     if (!token) return NextResponse.redirect(new URL('/login', req.url))
-    // Regular customer → home
-    if (token.role === 'CUSTOMER') return NextResponse.redirect(new URL('/', req.url))
+    // Customers (online or offline) → home
+    if (token.role === 'ONLINE_CUSTOMER' || token.role === 'OFFLINE_CUSTOMER') return NextResponse.redirect(new URL('/', req.url))
     // ADMIN bypasses permission check — prevents redirect loop when
     // token.permissions is empty (stale JWT or unseeded prod DB)
     if (token.role === 'ADMIN') return NextResponse.next()

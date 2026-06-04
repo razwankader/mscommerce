@@ -35,9 +35,10 @@ async function main() {
   // ── System roles ─────────────────────────────────────────────────────────
   await prisma.role.createMany({
     data: [
-      { name: 'ADMIN',    label: 'Administrator', description: 'Full access to all features',        isSystem: true },
-      { name: 'MANAGER',  label: 'Manager',       description: 'Catalog, orders, and content',       isSystem: true },
-      { name: 'CUSTOMER', label: 'Customer',      description: 'Regular customer, no admin access',  isSystem: true },
+      { name: 'ADMIN',             label: 'Administrator',    description: 'Full access to all features',                    isSystem: true },
+      { name: 'MANAGER',           label: 'Manager',          description: 'Catalog, orders, and content',                   isSystem: true },
+      { name: 'ONLINE_CUSTOMER',   label: 'Online Customer',  description: 'Self-registered online customer',                isSystem: true },
+      { name: 'OFFLINE_CUSTOMER',  label: 'Offline Customer', description: 'Walk-in customer managed by staff, no login',    isSystem: true },
     ],
     skipDuplicates: true,
   })

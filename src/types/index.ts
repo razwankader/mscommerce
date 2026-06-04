@@ -2,7 +2,7 @@ import type { User, Category, Product, Brand, Banner, Page, Setting, Order, Orde
 
 export type { User, Category, Product, Brand, Banner, Page, Setting, Order, OrderItem }
 
-export type UserRole = 'ADMIN' | 'MANAGER' | 'CUSTOMER'
+export type UserRole = 'ADMIN' | 'MANAGER' | 'ONLINE_CUSTOMER' | 'OFFLINE_CUSTOMER'
 export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'DRAFT'
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED'
 
