@@ -305,7 +305,7 @@ export default async function HomePage() {
       )}
 
       {/* Shop by Brand */}
-      {brands.length > 0 && (
+      {brands.filter((b: any) => b.logo).length > 0 && (
         <section id="brands" className="max-w-7xl mx-auto px-4 py-12">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -316,30 +316,41 @@ export default async function HomePage() {
               View All
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {brands.map((brand) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {brands.filter((b: any) => b.logo).map((brand) => (
               <Link
                 key={brand.id}
                 href={`/products?brand=${brand.slug}`}
-                className="group flex flex-col items-center justify-center text-center gap-2 p-5 rounded-xl border border-gray-200 bg-white hover:border-brand hover:shadow-md transition-all"
+                className="group relative flex items-center justify-center rounded-2xl border border-gray-100 bg-white hover:border-brand/40 hover:shadow-lg transition-all duration-200 overflow-hidden aspect-[3/2]"
               >
-                <div className="w-12 h-12 rounded-full bg-orange-50 group-hover:bg-brand/10 flex items-center justify-center transition-colors shrink-0 overflow-hidden">
-                  {brand.logo ? (
-                    <img src={brand.logo} alt={brand.name} className="w-full h-full object-contain p-1" />
-                  ) : (
-                    <span className="text-xl font-bold text-brand">
-                      {brand.name.charAt(0).toUpperCase()}
+                {/* subtle gradient overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-50/0 to-orange-50/0 group-hover:from-orange-50/60 group-hover:to-orange-100/40 transition-all duration-300" />
+
+                {brand.logo ? (
+                  <img
+                    src={brand.logo}
+                    alt={brand.name}
+                    className="relative z-10 w-[75%] h-[65%] object-contain transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-1.5 px-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand/10 to-orange-100 flex items-center justify-center group-hover:from-brand/20 group-hover:to-orange-200 transition-colors">
+                      <span className="text-2xl font-black text-brand leading-none">
+                        {brand.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-brand transition-colors text-center leading-tight">
+                      {brand.name}
                     </span>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 group-hover:text-brand transition-colors leading-tight">
-                    {brand.name}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {(brand as any)._count?.products ?? 0} products
-                  </p>
-                </div>
+                  </div>
+                )}
+
+                {/* brand name tooltip strip on hover — logo brands only */}
+                {brand.logo && (
+                  <div className="absolute bottom-0 inset-x-0 bg-white/90 backdrop-blur-sm py-1.5 px-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-200 z-20">
+                    <span className="text-xs font-semibold text-gray-800 truncate block">{brand.name}</span>
+                  </div>
+                )}
               </Link>
             ))}
           </div>
