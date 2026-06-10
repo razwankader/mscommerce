@@ -45,7 +45,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
     }).then(r => r.map(serializeProduct)),
     prisma.product.count({ where }),
-    prisma.category.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, name: true, slug: true, parentId: true } }),
+    prisma.category.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], select: { id: true, name: true, slug: true, parentId: true } }),
     prisma.brand.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
   ])
 
