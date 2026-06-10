@@ -7,8 +7,8 @@ import { unstable_cache, revalidateTag } from 'next/cache'
 const getParentCategories = unstable_cache(
   async () => prisma.category.findMany({
     where: { isActive: true, parentId: null },
-    include: { children: { where: { isActive: true } } },
-    orderBy: { order: 'asc' },
+    include: { children: { where: { isActive: true }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] } },
+    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
   }),
   ['categories-parent'],
   { tags: ['categories'], revalidate: 3600 }
@@ -17,8 +17,8 @@ const getParentCategories = unstable_cache(
 const getAllCategories = unstable_cache(
   async () => prisma.category.findMany({
     where: { isActive: true },
-    include: { _count: { select: { products: true } }, children: true },
-    orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
+    include: { _count: { select: { products: true } }, children: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] } },
+    orderBy: [{ parentId: 'asc' }, { order: 'asc' }, { createdAt: 'asc' }],
   }),
   ['categories-all'],
   { tags: ['categories'], revalidate: 3600 }
