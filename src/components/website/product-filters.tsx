@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { SlidersHorizontal, X } from 'lucide-react'
 
-interface Category { id: string; name: string; slug: string }
+interface Category { id: string; name: string; slug: string; parentId: string | null }
 interface Brand { id: string; name: string; slug: string }
 
 interface Props {
@@ -70,14 +70,31 @@ function FilterContent({ params, categories, brands, isSale, isBundle, onClose }
               All Categories
             </a>
           </li>
-          {categories.map((cat) => (
-            <li key={cat.id}>
-              <a href={buildUrl(params, { category: cat.slug, page: undefined })} onClick={onClose}
-                className={`block text-sm px-2 py-1 rounded-lg transition-colors ${params.category === cat.slug ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                {cat.name}
-              </a>
-            </li>
-          ))}
+          {categories
+            .filter(c => c.parentId === null)
+            .map(parent => {
+              const children = categories.filter(c => c.parentId === parent.id)
+              return (
+                <li key={parent.id}>
+                  <span className="block text-xs font-bold text-gray-400 uppercase tracking-wide px-2 pt-2 pb-1 select-none">
+                    {parent.name}
+                  </span>
+                  {children.length > 0 && (
+                    <ul className="space-y-0.5">
+                      {children.map(child => (
+                        <li key={child.id}>
+                          <a href={buildUrl(params, { category: child.slug, page: undefined })} onClick={onClose}
+                            className={`block text-sm pl-4 pr-2 py-1 rounded-lg transition-colors ${params.category === child.slug ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                            {child.name}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              )
+            })
+          }
         </ul>
       </div>
 
