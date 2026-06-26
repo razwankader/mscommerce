@@ -158,6 +158,7 @@ export default async function ProductDetailPage({ params }: Props) {
               price={Number(product.price)}
               salePrice={product.salePrice ? Number(product.salePrice) : null}
               dealerPrice={product.dealerPrice ? Number(product.dealerPrice) : null}
+              buyingPrice={product.buyingPrice ? Number(product.buyingPrice) : null}
               image={product.images?.[0] ?? null}
               stock={product.stock}
               hasRelations={manualRelations.length > 0}

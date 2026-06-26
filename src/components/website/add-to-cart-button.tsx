@@ -14,12 +14,13 @@ interface Props {
   price: number
   salePrice: number | null
   dealerPrice?: number | null
+  buyingPrice?: number | null
   image: string | null
   stock: number
   hasRelations?: boolean
 }
 
-export function AddToCartButton({ id, slug, name, price, salePrice, dealerPrice, image, stock, hasRelations }: Props) {
+export function AddToCartButton({ id, slug, name, price, salePrice, dealerPrice, buyingPrice, image, stock, hasRelations }: Props) {
   const { addItem } = useCart()
   const { status } = useSession()
   const router = useRouter()
@@ -30,7 +31,7 @@ export function AddToCartButton({ id, slug, name, price, salePrice, dealerPrice,
       router.push('/account/login')
       return
     }
-    addItem({ id, slug, name, price, salePrice, dealerPrice: dealerPrice ?? null, image })
+    addItem({ id, slug, name, price, salePrice, dealerPrice: dealerPrice ?? null, buyingPrice: buyingPrice ?? null, image })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
 

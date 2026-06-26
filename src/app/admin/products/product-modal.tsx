@@ -134,7 +134,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
               />
             </div>
             <Input
-              label="Price (৳) *"
+              label="Price / MRP (৳) *"
               type="number"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
@@ -142,7 +142,7 @@ export function ProductModal({ product, onClose, onSuccess }: ProductModalProps)
               placeholder="0"
             />
             <Input
-              label="Sale Price / MRP (৳)"
+              label="Sale Price (৳)"
               type="number"
               value={form.salePrice}
               onChange={(e) => setForm({ ...form, salePrice: e.target.value })}

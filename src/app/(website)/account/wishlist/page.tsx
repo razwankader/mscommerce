@@ -53,6 +53,7 @@ export default function WishlistPage() {
       price: p.price,
       salePrice: p.salePrice,
       dealerPrice: (p as any).dealerPrice ?? null,
+      buyingPrice: (p as any).buyingPrice ?? null,
       image: p.images?.[0] ?? null,
     })
 

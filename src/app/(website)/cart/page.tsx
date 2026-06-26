@@ -36,7 +36,7 @@ function ScannerPanel({ onAdd }: { onAdd: (name: string) => void }) {
         return
       }
       const p = await res.json()
-      addItem({ id: p.id, slug: p.slug, name: p.name, price: p.price, salePrice: p.salePrice, dealerPrice: p.dealerPrice ?? null, image: p.images?.[0] ?? null })
+      addItem({ id: p.id, slug: p.slug, name: p.name, price: p.price, salePrice: p.salePrice, dealerPrice: p.dealerPrice ?? null, buyingPrice: p.buyingPrice ?? null, image: p.images?.[0] ?? null })
       onAdd(p.name)
       lastScanned.current = ''
       setScanPaused(false)
@@ -235,51 +235,85 @@ function PriceOverride({
   onSet: (id: string, price: number | null) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [mode, setMode] = useState<'flat' | 'pct'>('flat')
   const [input, setInput] = useState('')
   const [err, setErr] = useState('')
 
   function open() {
     setInput(customPrice !== null ? String(customPrice) : '')
+    setMode('flat')
     setErr('')
     setEditing(true)
   }
 
   function apply() {
     const val = parseFloat(input)
-    if (isNaN(val) || val <= 0) { setErr('Enter a valid price'); return }
-    if (val > originalPrice) { setErr(`Must be ≤ ${formatPrice(originalPrice)}`); return }
-    onSet(itemId, val)
+    if (isNaN(val) || val <= 0) { setErr('Enter a valid number'); return }
+    let finalPrice: number
+    if (mode === 'flat') {
+      if (val > originalPrice) { setErr(`Must be ≤ ${formatPrice(originalPrice)}`); return }
+      finalPrice = val
+    } else {
+      if (val >= 100) { setErr('Enter % between 1–99'); return }
+      finalPrice = Math.round(originalPrice * (1 - val / 100))
+    }
+    onSet(itemId, finalPrice)
     setEditing(false)
+    setErr('')
   }
 
-  function clear() {
-    onSet(itemId, null)
-    setEditing(false)
-  }
+  function clear() { onSet(itemId, null); setInput(''); setEditing(false) }
+
+  // live preview for % mode
+  const pctVal = parseFloat(input)
+  const previewPrice = mode === 'pct' && !isNaN(pctVal) && pctVal > 0 && pctVal < 100
+    ? Math.round(originalPrice * (1 - pctVal / 100))
+    : null
 
   if (editing) {
     return (
-      <div className="mt-2 flex items-center gap-1.5">
-        <div className="relative">
-          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">৳</span>
+      <div className="mt-2 space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs shrink-0">
+            <button
+              onClick={() => { setMode('flat'); setInput(''); setErr('') }}
+              className={`px-2 py-1 font-medium transition-colors ${mode === 'flat' ? 'bg-amber-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            >৳</button>
+            <button
+              onClick={() => { setMode('pct'); setInput(''); setErr('') }}
+              className={`px-2 py-1 font-medium transition-colors ${mode === 'pct' ? 'bg-amber-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            >%</button>
+          </div>
           <input
             autoFocus
             type="number"
-            min={1}
-            max={originalPrice}
+            min={0}
+            max={mode === 'pct' ? 99 : originalPrice}
             value={input}
             onChange={(e) => { setInput(e.target.value); setErr('') }}
             onKeyDown={(e) => { if (e.key === 'Enter') apply(); if (e.key === 'Escape') setEditing(false) }}
-            className="w-28 pl-5 pr-2 py-1 text-xs border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-400"
-            placeholder={String(originalPrice)}
+            placeholder={mode === 'pct' ? 'e.g. 10' : String(originalPrice)}
+            className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:border-amber-400"
           />
+          <button onClick={apply} className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg hover:bg-amber-600 font-medium shrink-0">Apply</button>
+          <button onClick={() => setEditing(false)} className="p-1 text-gray-400 hover:text-gray-600 shrink-0"><X size={13} /></button>
+          {customPrice !== null && (
+            <button onClick={clear} className="p-1 text-gray-400 hover:text-red-500 shrink-0"><X size={13} /></button>
+          )}
         </div>
-        <button onClick={apply} className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg hover:bg-amber-600 font-medium">Apply</button>
-        <button onClick={() => setEditing(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={13} /></button>
-        {customPrice !== null && (
-          <button onClick={clear} className="text-xs text-red-400 hover:text-red-600 underline">Reset</button>
+        {previewPrice !== null && (
+          <div className="flex justify-between text-amber-600 font-medium text-xs">
+            <span>Price override</span>
+            <span>{formatPrice(previewPrice)}</span>
+          </div>
         )}
-        {err && <span className="text-xs text-red-500">{err}</span>}
+        {customPrice !== null && !previewPrice && (
+          <div className="flex justify-between text-amber-600 font-medium text-xs">
+            <span>Current override</span>
+            <span>{formatPrice(customPrice)}</span>
+          </div>
+        )}
+        {err && <p className="text-xs text-red-500">{err}</p>}
       </div>
     )
   }
@@ -315,10 +349,19 @@ export default function CartPage() {
   const [shipping, setShipping] = useState<ShippingConfig | null>(null)
   const [addedToast, setAddedToast] = useState<string | null>(null)
   const [revealedDealerPrices, setRevealedDealerPrices] = useState<Set<string>>(new Set())
+  const [revealedBuyingPrices, setRevealedBuyingPrices] = useState<Set<string>>(new Set())
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
 
   function toggleDealerPrice(id: string) {
     setRevealedDealerPrices(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleBuyingPrice(id: string) {
+    setRevealedBuyingPrices(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
@@ -446,13 +489,40 @@ export default function CartPage() {
                     <button
                       type="button"
                       onClick={() => toggleDealerPrice(item.id)}
-                      className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
+                      className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
                     >
                       <span>Dealer Price:</span>
-                      {revealedDealerPrices.has(item.id)
-                        ? <span className="font-bold">{formatPrice(item.dealerPrice)}</span>
-                        : <span className="text-gray-400">tap to reveal</span>
-                      }
+                      {revealedDealerPrices.has(item.id) ? (
+                        <>
+                          <span className="font-bold">{formatPrice(item.dealerPrice)}</span>
+                          {item.buyingPrice != null && (
+                            <span className="text-[9px] font-semibold text-indigo-400 bg-indigo-50 px-1 py-0.5 rounded">
+                              {Math.round((item.dealerPrice - item.buyingPrice) / item.buyingPrice * 100)}% markup
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-gray-400">tap to reveal</span>
+                      )}
+                    </button>
+                  )}
+                  {isStaff && item.buyingPrice != null && (
+                    <button
+                      type="button"
+                      onClick={() => toggleBuyingPrice(item.id)}
+                      className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-semibold text-emerald-600 hover:text-emerald-800 transition-colors"
+                    >
+                      <span>Buying Price:</span>
+                      {revealedBuyingPrices.has(item.id) ? (
+                        <>
+                          <span className="font-bold">{formatPrice(item.buyingPrice)}</span>
+                          <span className="text-[9px] font-semibold text-emerald-500 bg-emerald-50 px-1 py-0.5 rounded">
+                            {Math.round(100 - (item.buyingPrice / item.price) * 100)}% discount
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-400">tap to reveal</span>
+                      )}
                     </button>
                   )}
                   {/* Staff price override */}

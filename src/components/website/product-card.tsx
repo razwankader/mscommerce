@@ -24,6 +24,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [added, setAdded] = useState(false)
   const [imgError, setImgError] = useState(false)
   const [dealerRevealed, setDealerRevealed] = useState(false)
+  const [buyingRevealed, setBuyingRevealed] = useState(false)
 
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
 
@@ -48,6 +49,7 @@ export function ProductCard({ product }: ProductCardProps) {
       price: product.price,
       salePrice: product.salePrice,
       dealerPrice: product.dealerPrice ?? null,
+      buyingPrice: product.buyingPrice ?? null,
       image: product.images?.[0] ?? null,
     })
     setAdded(true)
@@ -125,13 +127,40 @@ export function ProductCard({ product }: ProductCardProps) {
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); setDealerRevealed(v => !v) }}
-                className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
+                className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
               >
                 <span>Dealer Price</span>
-                {dealerRevealed
-                  ? <span className="font-bold">{formatPrice(product.dealerPrice)}</span>
-                  : <span className="text-gray-400">— tap to reveal</span>
-                }
+                {dealerRevealed ? (
+                  <>
+                    <span className="font-bold">{formatPrice(product.dealerPrice)}</span>
+                    {product.buyingPrice != null && (
+                      <span className="text-[9px] font-semibold text-indigo-400 bg-indigo-50 px-1 py-0.5 rounded">
+                        {Math.round((product.dealerPrice - product.buyingPrice) / product.buyingPrice * 100)}% markup
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-gray-400">— tap to reveal</span>
+                )}
+              </button>
+            )}
+            {isStaff && product.buyingPrice != null && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setBuyingRevealed(v => !v) }}
+                className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-semibold text-emerald-600 hover:text-emerald-800 transition-colors"
+              >
+                <span>Buying Price</span>
+                {buyingRevealed ? (
+                  <>
+                    <span className="font-bold">{formatPrice(product.buyingPrice)}</span>
+                    <span className="text-[9px] font-semibold text-emerald-500 bg-emerald-50 px-1 py-0.5 rounded">
+                      {Math.round(100 - (product.buyingPrice / product.price) * 100)}% discount
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-gray-400">— tap to reveal</span>
+                )}
               </button>
             )}
           </div>
