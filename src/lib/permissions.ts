@@ -2,6 +2,7 @@
 export const PERMISSION_DEFINITIONS = [
   { key: 'dashboard.view',      label: 'View Dashboard',              group: 'General'         },
   { key: 'products.manage',     label: 'Manage Products',             group: 'Catalog'         },
+  { key: 'products.barcode',    label: 'View Product Barcodes',       group: 'Catalog'         },
   { key: 'categories.manage',   label: 'Manage Categories',           group: 'Catalog'         },
   { key: 'brands.manage',       label: 'Manage Brands',               group: 'Catalog'         },
   { key: 'orders.manage',       label: 'Manage Orders',               group: 'Orders & Stock'  },
@@ -18,7 +19,7 @@ export type PermissionKey = typeof PERMISSION_DEFINITIONS[number]['key']
 // Default permissions for system roles (used during DB seeding)
 export const ADMIN_PERMISSIONS: PermissionKey[] = PERMISSION_DEFINITIONS.map(p => p.key)
 export const MANAGER_PERMISSIONS: PermissionKey[] = [
-  'dashboard.view', 'products.manage', 'categories.manage', 'brands.manage',
+  'dashboard.view', 'products.manage', 'products.barcode', 'categories.manage', 'brands.manage',
   'orders.manage', 'stock.manage', 'banners.manage', 'pages.manage',
 ]
 

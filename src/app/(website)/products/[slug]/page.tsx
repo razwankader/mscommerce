@@ -7,8 +7,10 @@ import { ArrowLeft, Star, Package } from 'lucide-react'
 import type { Metadata } from 'next'
 import { ProductCard } from '@/components/website/product-card'
 import { AddToCartButton } from '@/components/website/add-to-cart-button'
+import { ProductBarcode } from '@/components/website/product-barcode'
 import type { ProductWithRelations, SerializedProduct } from '@/types'
 import { unstable_cache } from 'next/cache'
+import { auth } from '@/lib/auth'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -63,6 +65,9 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = await getCachedProduct(slug)
 
   if (!product || product.status !== 'ACTIVE') notFound()
+
+  const session = await auth()
+  const canViewBarcode = (session?.user?.permissions ?? []).includes('products.barcode')
 
   const [related, manualRelations] = await Promise.all([
     getCachedRelated(product.categoryId, product.id),
@@ -170,6 +175,10 @@ export default async function ProductDetailPage({ params }: Props) {
               Enquire Now
             </Link>
           </div>
+
+          {canViewBarcode && product.barcode && (
+            <ProductBarcode barcode={product.barcode} />
+          )}
 
           {product.description && (
             <div className="border-t border-gray-200 pt-6">
