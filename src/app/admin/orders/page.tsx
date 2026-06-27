@@ -37,11 +37,65 @@ export default function OrdersPage() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
 
+  // Commission state
+  const [commMode, setCommMode] = useState<'pct' | 'flat'>('pct')
+  const [commInput, setCommInput] = useState('')
+  const [commRepId, setCommRepId] = useState('')
+  const [savingComm, setSavingComm] = useState(false)
+
+  const { data: srData } = useQuery({
+    queryKey: ['sales-reps'],
+    queryFn: () => fetch('/api/sales-reps').then(r => r.json()),
+  })
+  const salesReps: any[] = srData?.data || []
+
   function openOrder(row: any) {
     setViewOrder(row)
     setNewPayment(EMPTY_PAYMENT)
     setPaymentError('')
     setEditingPaymentId(null)
+    // Pre-fill commission from existing order
+    setCommRepId(row.salesRepId || '')
+    if (row.commissionRate != null) {
+      setCommMode('pct')
+      setCommInput(String(Number(row.commissionRate)))
+    } else if (row.commissionAmount != null) {
+      setCommMode('flat')
+      setCommInput(String(Number(row.commissionAmount)))
+    } else {
+      setCommInput('')
+    }
+  }
+
+  async function saveCommission() {
+    if (!viewOrder) return
+    setSavingComm(true)
+    const total = Number(viewOrder.total)
+    const val = parseFloat(commInput)
+    const body: any = { salesRepId: commRepId || null }
+    if (commInput && !isNaN(val) && val > 0) {
+      if (commMode === 'pct') {
+        body.commissionRate = val
+        body.commissionAmount = Math.round(total * val / 100 * 100) / 100
+      } else {
+        body.commissionAmount = val
+        body.commissionRate = Math.round(val / total * 10000) / 100
+      }
+    } else {
+      body.commissionRate = null
+      body.commissionAmount = null
+    }
+    const res = await fetch(`/api/orders/${viewOrder.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    setSavingComm(false)
+    if (res.ok) {
+      const updated = await res.json()
+      setViewOrder((o: any) => ({ ...o, ...updated }))
+      qc.invalidateQueries({ queryKey: ['orders'] })
+    }
   }
 
   function startEdit(p: any) {
@@ -420,6 +474,77 @@ export default function OrdersPage() {
                   {paymentError}
                 </div>
               )}
+
+              {/* Sales Rep & Commission */}
+              <div className="border border-gray-100 rounded-xl bg-gray-50 p-4 space-y-3">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sales Rep & Commission</p>
+                <div className="space-y-2">
+                  <select
+                    value={commRepId}
+                    onChange={e => {
+                      const rep = salesReps.find(r => r.id === e.target.value)
+                      setCommRepId(e.target.value)
+                      if (rep?.defaultCommissionRate != null && !commInput) {
+                        setCommMode('pct')
+                        setCommInput(String(Number(rep.defaultCommissionRate)))
+                      }
+                    }}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:border-brand bg-white"
+                  >
+                    <option value="">— No Sales Rep —</option>
+                    {salesReps.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}{r.phone ? ` (${r.phone})` : ''}</option>
+                    ))}
+                  </select>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs shrink-0 bg-white">
+                      <button
+                        onClick={() => setCommMode('pct')}
+                        className={`px-2 py-1 font-medium transition-colors ${commMode === 'pct' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                      >%</button>
+                      <button
+                        onClick={() => setCommMode('flat')}
+                        className={`px-2 py-1 font-medium transition-colors ${commMode === 'flat' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                      >৳</button>
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      value={commInput}
+                      onChange={e => setCommInput(e.target.value)}
+                      placeholder={commMode === 'pct' ? 'Commission %' : 'Commission ৳'}
+                      className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:border-brand bg-white"
+                    />
+                    <button
+                      onClick={saveCommission}
+                      disabled={savingComm}
+                      className="px-2 py-1 bg-brand text-white text-xs rounded-lg hover:bg-orange-600 font-medium shrink-0 disabled:opacity-60"
+                    >
+                      {savingComm ? '…' : 'Save'}
+                    </button>
+                  </div>
+                  {/* Live preview */}
+                  {commInput && parseFloat(commInput) > 0 && (() => {
+                    const val = parseFloat(commInput)
+                    const total = Number(viewOrder.total)
+                    const amount = commMode === 'pct' ? Math.round(total * val / 100 * 100) / 100 : val
+                    const rate = commMode === 'flat' ? Math.round(val / total * 10000) / 100 : val
+                    return (
+                      <p className="text-xs text-brand font-medium">
+                        Commission: {formatPrice(amount)} ({rate}%)
+                      </p>
+                    )
+                  })()}
+                  {/* Saved commission */}
+                  {!commInput && viewOrder.commissionAmount != null && (
+                    <p className="text-xs text-gray-500">
+                      Saved: {formatPrice(Number(viewOrder.commissionAmount))}
+                      {viewOrder.commissionRate != null && ` (${Number(viewOrder.commissionRate)}%)`}
+                      {viewOrder.salesRep && ` — ${viewOrder.salesRep.name}`}
+                    </p>
+                  )}
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>

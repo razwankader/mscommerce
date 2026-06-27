@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   const [data, total] = await Promise.all([
     prisma.order.findMany({
       where,
-      include: { orderItems: { include: { product: true } }, payments: { orderBy: { paidAt: 'asc' } } },
+      include: { orderItems: { include: { product: true } }, payments: { orderBy: { paidAt: 'asc' } }, salesRep: true },
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -64,8 +64,9 @@ export async function POST(req: NextRequest) {
   const {
     items, firstName, lastName, email, phone, address, city, state, zipCode, notes,
     discount: rawDiscount, payments: rawPayments,
-    offlineCustomerId,  // staff: existing offline customer id (pre-looked-up)
-    createOfflineCustomer, // staff: { name, phone, email?, address?, city? } — new offline customer
+    offlineCustomerId,       // staff: existing offline customer id (pre-looked-up)
+    createOfflineCustomer,   // staff: { name, phone, email?, address?, city? } — new offline customer
+    salesRepId, commissionRate, commissionAmount,
   } = body
   // rawPayments: Array<{ method, amount?, referenceId?, bankName?, paidAt? }> — staff only
 
@@ -86,11 +87,14 @@ export async function POST(req: NextRequest) {
       // New offline customer — create profile
       const offlineRole = await prisma.role.findUnique({ where: { name: 'OFFLINE_CUSTOMER' } })
       if (offlineRole) {
-        const parts = (createOfflineCustomer.name || '').trim().split(' ')
+        // If email provided, check it's not already taken — drop it if so (phone is the primary key)
+        const emailToUse = createOfflineCustomer.email
+          ? (await prisma.user.findUnique({ where: { email: createOfflineCustomer.email } }) ? null : createOfflineCustomer.email)
+          : null
         const newCustomer = await prisma.user.create({
           data: {
             name: createOfflineCustomer.name || `${firstName} ${lastName}`.trim(),
-            email: createOfflineCustomer.email || null,
+            email: emailToUse,
             phone: createOfflineCustomer.phone,
             address: createOfflineCustomer.address || null,
             city: createOfflineCustomer.city || null,
@@ -178,6 +182,9 @@ export async function POST(req: NextRequest) {
           zipCode,
           notes,
           placedByStaff: isStaff,
+          ...(isStaff && salesRepId && { salesRepId }),
+          ...(isStaff && commissionRate != null && { commissionRate: Number(commissionRate) }),
+          ...(isStaff && commissionAmount != null && { commissionAmount: Number(commissionAmount) }),
           orderItems: { create: orderItems },
         },
         include: { orderItems: { include: { product: true } } },

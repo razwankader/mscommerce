@@ -16,6 +16,7 @@ import {
   ScanBarcode,
   Shield,
   X,
+  UserCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -34,8 +35,9 @@ const navItems: NavItem[] = [
       { href: '/admin/brands',     label: 'Brands',     permission: 'brands.manage'     },
     ],
   },
-  { href: '/admin/orders', label: 'Orders',        icon: ShoppingCart, permission: 'orders.manage' },
-  { href: '/admin/stock',  label: 'Stock Scanner', icon: ScanBarcode,  permission: 'stock.manage'  },
+  { href: '/admin/orders',     label: 'Orders',        icon: ShoppingCart, permission: 'orders.manage' },
+  { href: '/admin/sales-reps', label: 'Sales Reps',   icon: UserCheck,    permission: 'orders.manage' },
+  { href: '/admin/stock',      label: 'Stock Scanner', icon: ScanBarcode,  permission: 'stock.manage'  },
   { href: '/admin/users',  label: 'Users',         icon: Users,        permission: 'users.manage'  },
   {
     label: 'Content', icon: FileText,

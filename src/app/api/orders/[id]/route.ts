@@ -26,9 +26,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const body = await req.json()
-  const { status } = body
+  const { status, salesRepId, commissionRate, commissionAmount } = body
 
-  const order = await prisma.order.update({ where: { id }, data: { status } })
+  // Build commission update data
+  const commissionData: any = {}
+  if ('salesRepId' in body) commissionData.salesRepId = salesRepId || null
+  if ('commissionRate' in body) commissionData.commissionRate = commissionRate != null ? Number(commissionRate) : null
+  if ('commissionAmount' in body) commissionData.commissionAmount = commissionAmount != null ? Number(commissionAmount) : null
+
+  const order = await prisma.order.update({
+    where: { id },
+    data: { ...(status && { status }), ...commissionData },
+    include: { salesRep: true },
+  })
 
   if (status && ['DELIVERED', 'CANCELLED', 'REFUNDED'].includes(status) && order.email) {
     sendOrderStatusEmail(order.email, order.firstName, order.orderNumber, status)

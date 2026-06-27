@@ -264,11 +264,15 @@ model Order {
   notes              String?
   placedByStaff      Boolean       @default(false)
   placedById         String?
+  salesRepId         String?
+  commissionRate     Decimal?      @db.Decimal(5,2)
+  commissionAmount   Decimal?      @db.Decimal(10,2)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   user              User?              @relation("OrderCustomer", fields: [userId], references: [id])
   placedBy          User?              @relation("OrderPlacedBy", fields: [placedById], references: [id])
+  salesRep          SalesRep?          @relation(fields: [salesRepId], references: [id], onDelete: SetNull)
   orderItems        OrderItem[]
   payments          OrderPayment[]
   stockTransactions StockTransaction[]
@@ -397,4 +401,18 @@ model RolePermission {
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
+}
+
+model SalesRep {
+  id                    String    @id @default(cuid())
+  name                  String
+  phone                 String?
+  defaultCommissionRate Decimal?  @db.Decimal(5,2)
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  orders Order[]
+
+  @@map("sales_reps")
 }

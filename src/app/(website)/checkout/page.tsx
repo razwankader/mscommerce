@@ -55,6 +55,12 @@ export default function CheckoutPage() {
   const [offlineCustomerId, setOfflineCustomerId] = useState<string | null>(null)
   const [customerStatus, setCustomerStatus] = useState<'idle' | 'found' | 'new'>('idle')
 
+  // Staff: sales rep & commission
+  const [salesReps, setSalesReps] = useState<{ id: string; name: string; phone: string | null; defaultCommissionRate: number | null }[]>([])
+  const [salesRepId, setSalesRepId] = useState('')
+  const [commMode, setCommMode] = useState<'pct' | 'flat'>('pct')
+  const [commInput, setCommInput] = useState('')
+
   type PaymentEntry = { id: number; method: string; amount: string; referenceId: string; bankName: string; paidAt: string }
   const [payments, setPayments] = useState<PaymentEntry[]>([{ id: Date.now(), method: 'COD', amount: '', referenceId: '', bankName: '', paidAt: '' }])
 
@@ -109,6 +115,11 @@ export default function CheckoutPage() {
   }, [])
 
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !isStaff) return
+    fetch('/api/sales-reps').then(r => r.json()).then(d => setSalesReps(d.data || []))
+  }, [status, isStaff])
 
   useEffect(() => {
     if (status !== 'authenticated' || prefilled || isStaff) return
@@ -169,6 +180,15 @@ export default function CheckoutPage() {
           state: form.state,
           notes: form.notes,
           discount,
+          // Staff: sales rep & commission
+          ...(isStaff && salesRepId && { salesRepId }),
+          ...(isStaff && commInput && parseFloat(commInput) > 0 && (() => {
+            const val = parseFloat(commInput)
+            const grandTotal = total + (shippingConfig ? (shippingConfig.threshold !== null && subtotal >= shippingConfig.threshold ? 0 : shippingConfig.cost) : 0)
+            return commMode === 'pct'
+              ? { commissionRate: val, commissionAmount: Math.round(grandTotal * val / 100 * 100) / 100 }
+              : { commissionAmount: val, commissionRate: Math.round(val / grandTotal * 10000) / 100 }
+          })()),
           // Staff: offline customer resolution
           ...(isStaff && offlineCustomerId && { offlineCustomerId }),
           ...(isStaff && !offlineCustomerId && customerStatus === 'new' && {
@@ -442,6 +462,62 @@ export default function CheckoutPage() {
                 </div>
               )}
             </div>
+
+            {/* Staff: Sales Rep & Commission */}
+            {isStaff && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-base font-bold text-gray-900 mb-4">Sales Rep & Commission</h2>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sales Representative</label>
+                    <select
+                      value={salesRepId}
+                      onChange={e => {
+                        const rep = salesReps.find(r => r.id === e.target.value)
+                        setSalesRepId(e.target.value)
+                        if (rep?.defaultCommissionRate != null && !commInput) {
+                          setCommMode('pct')
+                          setCommInput(String(Number(rep.defaultCommissionRate)))
+                        }
+                      }}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                    >
+                      <option value="">— No Sales Rep —</option>
+                      {salesReps.map(r => (
+                        <option key={r.id} value={r.id}>{r.name}{r.phone ? ` (${r.phone})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Commission (optional)</label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs shrink-0">
+                        <button type="button" onClick={() => setCommMode('pct')}
+                          className={`px-2.5 py-2 font-medium transition-colors ${commMode === 'pct' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50'}`}>%</button>
+                        <button type="button" onClick={() => setCommMode('flat')}
+                          className={`px-2.5 py-2 font-medium transition-colors ${commMode === 'flat' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50'}`}>৳</button>
+                      </div>
+                      <input
+                        type="number"
+                        min={0}
+                        value={commInput}
+                        onChange={e => setCommInput(e.target.value)}
+                        placeholder={commMode === 'pct' ? 'e.g. 5' : 'Amount'}
+                        className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                      />
+                    </div>
+                    {commInput && parseFloat(commInput) > 0 && (() => {
+                      const val = parseFloat(commInput)
+                      const shipping2 = shippingConfig ? (shippingConfig.threshold !== null && subtotal >= shippingConfig.threshold ? 0 : shippingConfig.cost) : 0
+                      const grandTotal2 = total + shipping2
+                      const amount = commMode === 'pct' ? Math.round(grandTotal2 * val / 100 * 100) / 100 : val
+                      const rate = commMode === 'flat' ? Math.round(val / grandTotal2 * 10000) / 100 : val
+                      return <p className="text-xs text-brand font-medium mt-1.5">Commission: ৳{amount.toLocaleString('en-BD')} ({rate}%)</p>
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right — order summary */}
