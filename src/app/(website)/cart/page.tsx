@@ -333,6 +333,32 @@ function PriceOverride({
   )
 }
 
+function QuantityInput({ id, quantity, onUpdate }: { id: string; quantity: number; onUpdate: (id: string, qty: number) => void }) {
+  const [value, setValue] = useState(String(quantity))
+
+  useEffect(() => {
+    setValue(String(quantity))
+  }, [quantity])
+
+  return (
+    <input
+      type="number"
+      min={1}
+      value={value}
+      onChange={(e) => {
+        setValue(e.target.value)
+        const val = parseInt(e.target.value)
+        if (!isNaN(val) && val >= 1) onUpdate(id, val)
+      }}
+      onBlur={() => {
+        const val = parseInt(value)
+        if (isNaN(val) || val < 1) setValue(String(quantity))
+      }}
+      className="w-12 text-center text-sm font-semibold rounded-lg border border-gray-200 py-0.5 focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+    />
+  )
+}
+
 function formatPrice(n: number) {
   return '৳' + n.toLocaleString('en-BD')
 }
@@ -543,20 +569,7 @@ export default function CartPage() {
                       >
                         <Minus size={12} />
                       </button>
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value)
-                          if (!isNaN(val) && val >= 1) updateQty(item.id, val)
-                        }}
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value)
-                          if (isNaN(val) || val < 1) updateQty(item.id, 1)
-                        }}
-                        className="w-12 text-center text-sm font-semibold rounded-lg border border-gray-200 py-0.5 focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
+                      <QuantityInput id={item.id} quantity={item.quantity} onUpdate={updateQty} />
                       <button
                         onClick={() => updateQty(item.id, item.quantity + 1)}
                         className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:border-brand hover:text-brand transition-colors"
