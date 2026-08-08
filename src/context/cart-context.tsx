@@ -27,6 +27,7 @@ interface CartContextValue {
   setCustomPrice: (id: string, price: number | null) => void
   setDiscount: (amount: number) => void
   clearCart: () => void
+  replaceCart: (items: CartItem[], discount: number) => void
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
@@ -75,6 +76,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const clearCart = useCallback(() => { setItems([]); setDiscountState(0) }, [])
+  const replaceCart = useCallback((newItems: CartItem[], newDiscount: number) => {
+    setItems(newItems)
+    setDiscountState(Math.max(0, newDiscount))
+  }, [])
   const setDiscount = useCallback((amount: number) => {
     setDiscountState(Math.max(0, amount))
   }, [])
@@ -84,7 +89,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const total = Math.max(0, subtotal - discount)
 
   return (
-    <CartContext.Provider value={{ items, count, subtotal, discount, total, addItem, removeItem, updateQty, setCustomPrice, setDiscount, clearCart }}>
+    <CartContext.Provider value={{ items, count, subtotal, discount, total, addItem, removeItem, updateQty, setCustomPrice, setDiscount, clearCart, replaceCart }}>
       {children}
     </CartContext.Provider>
   )

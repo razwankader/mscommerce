@@ -76,6 +76,7 @@ model User {
   accounts          Account[]
   wishlistItems     WishlistItem[]
   stockTransactions StockTransaction[]
+  savedCarts        SavedCart[]
 
   @@unique([phone, roleId])
   @@map("users")
@@ -401,6 +402,19 @@ model RolePermission {
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
+}
+
+model SavedCart {
+  id        String    @id @default(cuid())
+  staffId   String
+  label     String?
+  snapshot  Json
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  staff User @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@map("saved_carts")
 }
 
 model SalesRep {

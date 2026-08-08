@@ -121,6 +121,7 @@ export default function CheckoutPage() {
     fetch('/api/sales-reps').then(r => r.json()).then(d => setSalesReps(d.data || []))
   }, [status, isStaff])
 
+
   useEffect(() => {
     if (status !== 'authenticated' || prefilled || isStaff) return
     fetch('/api/account/profile')
@@ -249,6 +250,7 @@ export default function CheckoutPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left — delivery info */}
           <div className="lg:col-span-2 space-y-6">
+
             {/* Delivery Details */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-5">
@@ -593,6 +595,7 @@ export default function CheckoutPage() {
           </div>
         </div>
       </form>
+
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useCart } from '@/context/cart-context'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Loader2, ScanBarcode, Camera, Keyboard, AlertCircle, ChevronDown, Tag, X } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Loader2, ScanBarcode, Camera, Keyboard, AlertCircle, ChevronDown, Tag, X, BookmarkPlus, BookOpen, AlertTriangle, Bookmark } from 'lucide-react'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -369,7 +369,7 @@ interface ShippingConfig {
 }
 
 export default function CartPage() {
-  const { items, count, subtotal, discount, total, removeItem, updateQty, setCustomPrice, setDiscount, clearCart } = useCart()
+  const { items, count, subtotal, discount, total, removeItem, updateQty, setCustomPrice, setDiscount, clearCart, replaceCart } = useCart()
   const { data: session, status } = useSession()
   const router = useRouter()
   const [shipping, setShipping] = useState<ShippingConfig | null>(null)
@@ -377,6 +377,15 @@ export default function CartPage() {
   const [revealedDealerPrices, setRevealedDealerPrices] = useState<Set<string>>(new Set())
   const [revealedBuyingPrices, setRevealedBuyingPrices] = useState<Set<string>>(new Set())
   const isStaff = (session?.user?.permissions?.length ?? 0) > 0
+  const canHold = (session?.user?.permissions as string[] | undefined)?.includes('orders.hold') ?? false
+
+  // Saved carts state
+  const [savedCarts, setSavedCarts] = useState<any[]>([])
+  const [pendingResume, setPendingResume] = useState<any | null>(null)
+  const [showSaveInput, setShowSaveInput] = useState(false)
+  const [saveLabel, setSaveLabel] = useState('')
+  const [savingCart, setSavingCart] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   function toggleDealerPrice(id: string) {
     setRevealedDealerPrices(prev => {
@@ -398,6 +407,39 @@ export default function CartPage() {
     setAddedToast(name)
     setTimeout(() => setAddedToast(null), 2500)
   }, [])
+
+  useEffect(() => {
+    if (!canHold) return
+    fetch('/api/saved-carts').then(r => r.json()).then(d => setSavedCarts(d.data || []))
+  }, [canHold])
+
+  async function saveCurrentCart() {
+    if (items.length === 0 || !saveLabel.trim()) return
+    setSavingCart(true)
+    await fetch('/api/saved-carts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: saveLabel.trim(), snapshot: { items, discount } }),
+    })
+    setSavingCart(false)
+    setSaveLabel('')
+    setShowSaveInput(false)
+    fetch('/api/saved-carts').then(r => r.json()).then(d => setSavedCarts(d.data || []))
+  }
+
+  async function confirmResume() {
+    if (!pendingResume) return
+    const snap = pendingResume.snapshot as any
+    replaceCart(snap.items || [], snap.discount ?? 0)
+    await fetch(`/api/saved-carts/${pendingResume.id}`, { method: 'DELETE' })
+    setSavedCarts(prev => prev.filter(c => c.id !== pendingResume.id))
+    setPendingResume(null)
+  }
+
+  async function deleteSavedCart(id: string) {
+    await fetch(`/api/saved-carts/${id}`, { method: 'DELETE' })
+    setSavedCarts(prev => prev.filter(c => c.id !== id))
+  }
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -426,54 +468,134 @@ export default function CartPage() {
 
   const grandTotal = deliveryFee !== null ? total + deliveryFee : null  // total already has discount applied
 
-  if (count === 0) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-10">
-        {isStaff && <ScannerPanel onAdd={handleScannedAdd} />}
-        {addedToast && (
-          <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
-            <ScanBarcode size={16} className="text-green-500 shrink-0" />
-            Added to cart: {addedToast}
-          </div>
-        )}
-        <div className="text-center py-16">
-          <ShoppingBag size={64} className="mx-auto text-gray-300 mb-6" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
-          <p className="text-gray-500 mb-8">Add some products to get started.</p>
-          <Link
-            href="/products"
-            className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-xl hover:bg-brand-dark transition-colors"
-          >
-            <ArrowLeft size={16} />
-            Browse Products
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Shopping Cart ({count} items)</h1>
-        <button
-          onClick={clearCart}
-          className="text-sm text-red-500 hover:text-red-700 transition-colors"
-        >
-          Clear all
-        </button>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-      {/* Staff-only barcode scanner */}
-      {isStaff && <ScannerPanel onAdd={handleScannedAdd} />}
+      {/* Saved Carts — left sidebar on desktop, top on mobile */}
+      {canHold && (
+        <div className="w-full lg:w-60 lg:shrink-0 lg:sticky lg:top-24">
+          <div className="bg-white rounded-xl border border-amber-200 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100 bg-amber-50/50">
+              <BookOpen size={14} className="text-amber-600 shrink-0" />
+              <h2 className="text-sm font-bold text-gray-900 flex-1">Saved Carts</h2>
+              {savedCarts.length > 0 && (
+                <span className="text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">{savedCarts.length}</span>
+              )}
+            </div>
 
-      {/* Added toast */}
-      {addedToast && (
-        <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
-          <ScanBarcode size={16} className="text-green-500 shrink-0" />
-          Added to cart: {addedToast}
+            {savedCarts.length === 0 ? (
+              <p className="px-4 py-4 text-[11px] text-gray-400 leading-relaxed">No saved carts yet. Save your current cart to resume it later.</p>
+            ) : (
+              <div className="divide-y divide-gray-100 max-h-[50vh] overflow-y-auto">
+                {savedCarts.map((sc) => (
+                  <div key={sc.id} className="px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 leading-snug">{sc.label || 'Unnamed cart'}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {new Date(sc.createdAt).toLocaleString('en-BD', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <button onClick={() => deleteSavedCart(sc.id)} className="shrink-0 p-0.5 text-gray-300 hover:text-red-400 transition-colors mt-0.5">
+                        <X size={11} />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setPendingResume(sc)}
+                      className="mt-2 w-full py-1.5 text-[11px] font-semibold rounded-lg bg-brand text-white hover:bg-orange-600 transition-colors"
+                    >
+                      Load Cart
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Save current cart */}
+            {items.length > 0 && (
+              <div className="px-3 py-3 border-t border-amber-100 bg-amber-50/30">
+                {showSaveInput ? (
+                  <div className="space-y-2">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={saveLabel}
+                      onChange={e => setSaveLabel(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveCurrentCart(); if (e.key === 'Escape') { setShowSaveInput(false); setSaveLabel('') } }}
+                      placeholder="Label (e.g. Ahmed – Pump)"
+                      className="w-full rounded-lg border border-amber-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500"
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={saveCurrentCart}
+                        disabled={savingCart || !saveLabel.trim()}
+                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                      >
+                        {savingCart ? <Loader2 size={11} className="animate-spin" /> : <Bookmark size={11} />}
+                        Save
+                      </button>
+                      <button onClick={() => { setShowSaveInput(false); setSaveLabel('') }} className="px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 rounded-lg border border-gray-200">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowSaveInput(true)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                  >
+                    <BookmarkPlus size={12} />
+                    Save Current Cart
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+      {count === 0 ? (
+        <div className="max-w-2xl mx-auto">
+          {isStaff && <ScannerPanel onAdd={handleScannedAdd} />}
+          {addedToast && (
+            <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
+              <ScanBarcode size={16} className="text-green-500 shrink-0" />
+              Added to cart: {addedToast}
+            </div>
+          )}
+          <div className="text-center py-16">
+            <ShoppingBag size={64} className="mx-auto text-gray-300 mb-6" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
+            <p className="text-gray-500 mb-8">Add some products to get started.</p>
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-xl hover:bg-brand-dark transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Browse Products
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-bold text-gray-900">Shopping Cart ({count} items)</h1>
+            <button onClick={() => setShowClearConfirm(true)} className="text-sm text-red-500 hover:text-red-700 transition-colors">Clear all</button>
+          </div>
+
+          {/* Staff-only barcode scanner */}
+          {isStaff && <ScannerPanel onAdd={handleScannedAdd} />}
+
+          {/* Added toast */}
+          {addedToast && (
+            <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
+              <ScanBarcode size={16} className="text-green-500 shrink-0" />
+              Added to cart: {addedToast}
+            </div>
+          )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Items */}
@@ -656,6 +778,89 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
+      </div> {/* end main content */}
+      </div> {/* end flex row */}
+
+      {/* Clear cart confirmation modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle size={18} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Clear your cart?</h3>
+                <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                  {canHold
+                    ? 'All items will be permanently removed. If you want to come back to this order later, save your cart first using the "Save Current Cart" option on the left.'
+                    : 'All items will be permanently removed from your cart. This action cannot be undone.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              {canHold && (
+                <button
+                  onClick={() => { setShowClearConfirm(false); setShowSaveInput(true) }}
+                  className="px-4 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+                >
+                  Save First
+                </button>
+              )}
+              <button
+                onClick={() => { clearCart(); setShowClearConfirm(false) }}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Clear Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resume confirmation modal */}
+      {pendingResume && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertTriangle size={18} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Replace current cart?</h3>
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  Loading <span className="font-semibold text-gray-700">"{pendingResume.label || 'this saved cart'}"</span> will replace all items currently in your cart. Your existing items will be lost.
+                </p>
+              </div>
+              <button onClick={() => setPendingResume(null)} className="shrink-0 p-1 text-gray-400 hover:text-gray-600">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPendingResume(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmResume}
+                className="px-4 py-2 text-sm font-semibold text-white bg-brand rounded-lg hover:bg-orange-600 transition-colors"
+              >
+                Yes, Load Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

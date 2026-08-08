@@ -6,6 +6,7 @@ export const PERMISSION_DEFINITIONS = [
   { key: 'categories.manage',   label: 'Manage Categories',           group: 'Catalog'         },
   { key: 'brands.manage',       label: 'Manage Brands',               group: 'Catalog'         },
   { key: 'orders.manage',       label: 'Manage Orders',               group: 'Orders & Stock'  },
+  { key: 'orders.hold',         label: 'Hold & Resume Orders',        group: 'Orders & Stock'  },
   { key: 'stock.manage',        label: 'Manage Stock',                group: 'Orders & Stock'  },
   { key: 'banners.manage',      label: 'Manage Banners',              group: 'Content'         },
   { key: 'pages.manage',        label: 'Manage Pages',                group: 'Content'         },
