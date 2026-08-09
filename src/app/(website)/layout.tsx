@@ -11,7 +11,7 @@ export default function WebsiteLayout({ children }: { children: React.ReactNode 
     <WishlistProvider>
       <NextTopLoader color="#f97316" height={3} showSpinner={false} />
       <Toaster
-        position="top-right"
+        position="bottom-right"
         richColors
         closeButton
         toastOptions={{
